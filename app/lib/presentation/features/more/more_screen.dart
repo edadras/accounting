@@ -9,6 +9,7 @@ import '../assets/assets_screen.dart';
 import '../banking/banking_screen.dart';
 import '../buildings/buildings_screen.dart';
 import '../business/business_screen.dart';
+import '../documents/documents_screen.dart';
 import '../investment/investment_screen.dart';
 import '../travel/travel_screen.dart';
 import 'module_scaffold.dart';
@@ -32,9 +33,9 @@ final class ModuleEntry {
   final Widget Function() open;
 }
 
-/// The bottom bar holds the five screens a person opens daily; these six are
+/// The bottom bar holds the five screens a person opens daily; these are
 /// deliberate visits, so they live one tap deeper instead of squeezing the
-/// tab bar to eleven targets.
+/// tab bar to a dozen targets.
 ///
 /// Accents are semantic, not decorative: amber where everything has a due date,
 /// violet for investment, magenta where the number that matters is what is
@@ -87,6 +88,14 @@ const moduleEntries = <ModuleEntry>[
     icon: Icons.storefront_rounded,
     accent: NeonPalette.magenta,
     open: BusinessScreen.new,
+  ),
+  ModuleEntry(
+    id: 'documents',
+    titleKey: 'documents.title',
+    hintKey: 'documents.hint',
+    icon: Icons.folder_copy_rounded,
+    accent: NeonPalette.violet,
+    open: DocumentsScreen.new,
   ),
 ];
 

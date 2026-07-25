@@ -11,6 +11,7 @@ import '../../../data/ledger_repository.dart';
 import '../../../domain/analytics.dart';
 import '../../widgets/neon_card.dart';
 import '../../widgets/neon_widgets.dart';
+import '../data/report_export_screen.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -84,6 +85,44 @@ class ReportsScreen extends ConsumerWidget {
                 _BudgetCard(budget: budget, locale: locale, t: t),
                 const SizedBox(height: 10),
               ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // The export screen was built and reachable from nowhere. It belongs
+        // here rather than in settings: you decide to export the report you are
+        // currently looking at, not by going to look for a settings row.
+        NeonCardShell(
+          key: const ValueKey('reports-export'),
+          accent: NeonPalette.lime,
+          padding: const EdgeInsetsDirectional.all(16),
+          onTap: () => Navigator.of(context).push(
+            ReportExportScreen.route(
+              reportType: 'cash-flow',
+              reportLabelKey: 'reports.cashFlow',
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.download_rounded, size: 19, color: NeonPalette.lime),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  t('data.report.title'),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: NeonPalette.textPrimary,
+                  ),
+                ),
+              ),
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                size: 19,
+                color: NeonPalette.lime,
+              ),
             ],
           ),
         ),

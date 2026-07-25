@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/i18n/translator.dart';
 import '../core/theme/neon_effects.dart';
 import '../core/theme/neon_palette.dart';
+import '../sync/sync_controller.dart';
 import 'app_state.dart';
 import 'features/accounts/accounts_screen.dart';
+import 'features/conflicts/conflicts_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/reports/reports_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -31,12 +33,32 @@ class AppShell extends ConsumerWidget {
     final isOnline = ref.watch(isOnlineProvider);
     final pending = ref.watch(pendingChangesProvider);
 
+    // The sync engine has always counted conflicts and nothing ever showed
+    // them, so an edit that lost a race with the server was unreachable — the
+    // resolution screen existed with no door. Nothing renders at zero, which is
+    // every offline demo build and most real sessions.
+    final conflicts = ref.watch(syncStateProvider).conflicts;
+
     return NeonBackdrop(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: Text(t(_tabs[index].$1)),
           actions: [
+            if (conflicts > 0)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: NeonChip(
+                  key: const ValueKey('conflicts-chip'),
+                  label: '$conflicts',
+                  // Magenta and glowing: this is the one banner that means the
+                  // user's own edit is at stake, and it outranks being offline.
+                  accent: NeonPalette.magenta,
+                  selected: true,
+                  icon: Icons.merge_type_rounded,
+                  onTap: () => Navigator.of(context).push(ConflictsScreen.route()),
+                ),
+              ),
             if (!isOnline)
               Padding(
                 padding: const EdgeInsetsDirectional.only(end: 12),
