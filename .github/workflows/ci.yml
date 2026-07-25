@@ -47,10 +47,14 @@ jobs:
 
       # A migration that cannot be undone turns a bad deploy into a restore
       # from backup, so reversibility is checked on every push, not hoped for.
+      #
+      # `migrate:reset` rather than `rollback --step=N`: a fixed step silently
+      # stops covering the oldest migrations as soon as the count passes N, and
+      # the step that no longer reverses anything still exits 0.
       - name: Check migrations roll back and re-apply
         run: |
           php artisan migrate --force
-          php artisan migrate:rollback --step=40 --force
+          php artisan migrate:reset --force
           php artisan migrate --force
 
       - name: Tests with coverage
