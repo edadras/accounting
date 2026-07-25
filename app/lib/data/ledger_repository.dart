@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/money/currency.dart';
 import '../core/money/money.dart';
+import '../domain/analytics.dart';
 import '../domain/entities.dart';
 
 abstract interface class LedgerRepository {
@@ -11,6 +12,8 @@ abstract interface class LedgerRepository {
   Future<List<Transaction>> transactions({int limit});
   Future<Transaction> record(Transaction draft);
   Future<DashboardSummary> summary();
+  Future<List<Budget>> budgets();
+  Future<CashFlowReport> cashFlow({int months});
 }
 
 /// In-memory repository so the app runs, and can be demoed and golden-tested,
@@ -88,7 +91,7 @@ final class InMemoryLedgerRepository implements LedgerRepository {
         categoryId: categoryId,
         occurredAt: now.subtract(Duration(days: daysAgo, hours: daysAgo * 3 % 20)),
         description: description,
-      ));
+      ),);
     }
 
     add(TransactionType.expense, 35000, 'cat-restaurant', 'شام', 0, 'acc-wallet');
@@ -181,7 +184,7 @@ final class InMemoryLedgerRepository implements LedgerRepository {
                       .firstOrNull ??
                   entry.key,
               amount: Money(entry.value, baseCurrency),
-            ))
+            ),)
         .toList()
       ..sort((a, b) => b.amount.minorUnits.compareTo(a.amount.minorUnits));
 
@@ -194,6 +197,106 @@ final class InMemoryLedgerRepository implements LedgerRepository {
       earnedThisMonth: Money(earned, baseCurrency),
       byCategory: slices,
       recent: _transactions.take(6).toList(),
+    );
+  }
+
+  @override
+  Future<List<Budget>> budgets() async {
+    final summary = await this.summary();
+
+    Money spentOn(String categoryId) {
+      final slice = summary.byCategory
+          .where((slice) => slice.categoryId == categoryId)
+          .firstOrNull;
+      return slice?.amount ?? Money(0, baseCurrency);
+    }
+
+    return [
+      Budget(
+        id: 'bud-overall',
+        name: 'کل ماه',
+        amount: Money(400000, baseCurrency),
+        spent: summary.spentThisMonth,
+        period: BudgetPeriod.monthly,
+      ),
+      Budget(
+        id: 'bud-food',
+        name: 'خوراک',
+        amount: Money(150000, baseCurrency),
+        spent: spentOn('cat-food') + spentOn('cat-restaurant'),
+        period: BudgetPeriod.monthly,
+        categoryId: 'cat-food',
+        rollover: true,
+        carriedOver: Money(18000, baseCurrency),
+      ),
+      Budget(
+        id: 'bud-transport',
+        name: 'حمل و نقل',
+        amount: Money(40000, baseCurrency),
+        spent: spentOn('cat-transport'),
+        period: BudgetPeriod.monthly,
+        categoryId: 'cat-transport',
+      ),
+      Budget(
+        id: 'bud-leisure',
+        name: 'تفریح',
+        amount: Money(25000, baseCurrency),
+        spent: spentOn('cat-leisure'),
+        period: BudgetPeriod.monthly,
+        categoryId: 'cat-leisure',
+      ),
+    ];
+  }
+
+  @override
+  Future<CashFlowReport> cashFlow({int months = 6}) async {
+    final now = DateTime.now();
+    final buckets = <String, (int income, int expense)>{};
+
+    for (var i = months - 1; i >= 0; i--) {
+      final month = DateTime(now.year, now.month - i);
+      buckets['${month.year}-${month.month.toString().padLeft(2, '0')}'] = (0, 0);
+    }
+
+    for (final transaction in _transactions) {
+      final key = '${transaction.occurredAt.year}-'
+          '${transaction.occurredAt.month.toString().padLeft(2, '0')}';
+      final bucket = buckets[key];
+      if (bucket == null) continue;
+
+      // Transfers move the user's own money between their own accounts, so
+      // they belong in neither column.
+      buckets[key] = switch (transaction.type) {
+        TransactionType.income => (
+            bucket.$1 + transaction.baseAmount.minorUnits,
+            bucket.$2,
+          ),
+        TransactionType.expense => (
+            bucket.$1,
+            bucket.$2 + transaction.baseAmount.minorUnits,
+          ),
+        TransactionType.transfer => bucket,
+      };
+    }
+
+    var totalIncome = 0;
+    var totalExpense = 0;
+    final points = <TrendPoint>[];
+
+    for (final entry in buckets.entries) {
+      totalIncome += entry.value.$1;
+      totalExpense += entry.value.$2;
+      points.add(TrendPoint(
+        label: entry.key.split('-').last,
+        income: Money(entry.value.$1, baseCurrency),
+        expense: Money(entry.value.$2, baseCurrency),
+      ),);
+    }
+
+    return CashFlowReport(
+      points: points,
+      totalIncome: Money(totalIncome, baseCurrency),
+      totalExpense: Money(totalExpense, baseCurrency),
     );
   }
 }
@@ -224,4 +327,14 @@ final transactionsProvider = FutureProvider<List<Transaction>>((ref) {
 final summaryProvider = FutureProvider<DashboardSummary>((ref) {
   ref.watch(ledgerRevisionProvider);
   return ref.watch(ledgerRepositoryProvider).summary();
+});
+
+final budgetsProvider = FutureProvider<List<Budget>>((ref) {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(ledgerRepositoryProvider).budgets();
+});
+
+final cashFlowProvider = FutureProvider<CashFlowReport>((ref) {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(ledgerRepositoryProvider).cashFlow();
 });

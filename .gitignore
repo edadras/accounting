@@ -53,3 +53,8 @@ Thumbs.db
 # Local dev database
 /backend/database/*.sqlite
 /backend/database/*.sqlite-journal
+
+# Flutter build output and IDE cruft
+/app/build/
+/app/.dart_tool/
+/app/finora.iml

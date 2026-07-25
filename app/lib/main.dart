@@ -24,8 +24,10 @@ class FinoraApp extends ConsumerWidget {
     return MaterialApp(
       title: t('app.name'),
       debugShowCheckedModeBanner: false,
-      theme: NeonTheme.light(),
-      darkTheme: NeonTheme.dark(),
+      // Vazirmatn covers Persian, Arabic and Latin in one family, so the app
+      // does not change typeface when the user switches language.
+      theme: NeonTheme.light(fontFamily: 'Vazirmatn'),
+      darkTheme: NeonTheme.dark(fontFamily: 'Vazirmatn'),
       themeMode: themeMode,
       locale: locale.locale,
       supportedLocales: [for (final l in AppLocale.supported) l.locale],

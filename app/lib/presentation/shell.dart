@@ -7,6 +7,7 @@ import '../core/theme/neon_palette.dart';
 import 'app_state.dart';
 import 'features/accounts/accounts_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
+import 'features/reports/reports_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/transactions/quick_add_sheet.dart';
 import 'features/transactions/transactions_screen.dart';
@@ -18,6 +19,7 @@ class AppShell extends ConsumerWidget {
   static const _tabs = <(String, IconData)>[
     ('nav.dashboard', Icons.grid_view_rounded),
     ('nav.transactions', Icons.receipt_long_rounded),
+    ('nav.reports', Icons.insights_rounded),
     ('nav.accounts', Icons.account_balance_wallet_rounded),
     ('nav.settings', Icons.settings_rounded),
   ];
@@ -56,6 +58,7 @@ class AppShell extends ConsumerWidget {
             children: const [
               DashboardScreen(),
               TransactionsScreen(),
+              ReportsScreen(),
               AccountsScreen(),
               SettingsScreen(),
             ],
@@ -144,7 +147,7 @@ class _NeonNavBar extends StatelessWidget {
                   icon: icons[i],
                   selected: i == index,
                   onTap: () => onChanged(i),
-                )),
+                ),),
                 // Gap in the middle for the floating add button.
                 if (i == labels.length ~/ 2 - 1) const SizedBox(width: 68),
               ],

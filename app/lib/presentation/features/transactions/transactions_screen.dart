@@ -167,7 +167,7 @@ class _EmptyState extends StatelessWidget {
                 border: Border.all(color: NeonPalette.cyan.withValues(alpha: 0.25)),
               ),
               child: const Icon(Icons.receipt_long_rounded,
-                  color: NeonPalette.cyan, size: 30),
+                  color: NeonPalette.cyan, size: 30,),
             ),
             const SizedBox(height: 18),
             Text(

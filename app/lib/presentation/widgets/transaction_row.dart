@@ -98,8 +98,8 @@ class TransactionRow extends StatelessWidget {
                           const SizedBox(width: 6),
                           // Not yet on the server. Shown, never hidden — the
                           // user should always know what is still local.
-                          Icon(Icons.cloud_upload_outlined,
-                              size: 13, color: NeonPalette.amber),
+                          const Icon(Icons.cloud_upload_outlined,
+                              size: 13, color: NeonPalette.amber,),
                         ],
                       ],
                     ),

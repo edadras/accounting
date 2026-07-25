@@ -23,12 +23,12 @@ class NeonBackdrop extends StatelessWidget {
     return Stack(
       children: [
         const Positioned.fill(child: ColoredBox(color: NeonPalette.abyss)),
-        Positioned(
+        const Positioned(
           top: -140,
           right: -100,
           child: _Bloom(color: NeonPalette.cyan, size: 340),
         ),
-        Positioned(
+        const Positioned(
           bottom: -160,
           left: -120,
           child: _Bloom(color: NeonPalette.violet, size: 380),
@@ -177,7 +177,9 @@ class NeonCardShell extends StatelessWidget {
         child: Ink(
           padding: padding,
           decoration: BoxDecoration(
-            color: isDark ? NeonPalette.surface : Colors.white,
+            // Gradient only in dark mode: a BoxDecoration ignores `color`
+            // whenever a gradient is set, so passing both would drop the fill.
+            color: isDark ? null : Colors.white,
             gradient: isDark ? NeonEffects.glass(tint: accent) : null,
             borderRadius: radius,
             border: NeonEffects.border(accent, alpha: isDark ? 0.20 : 0.14),

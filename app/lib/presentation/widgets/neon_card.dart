@@ -40,10 +40,12 @@ class NeonCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        gradient: isDark ? NeonEffects.glass(tint: accent) : null,
-        color: isDark
-            ? NeonPalette.surface.withValues(alpha: 0.72)
-            : Colors.white,
+        // A glowing card sits on top of its own halo, so it needs an opaque
+        // fill; a plain card can stay translucent over the page backdrop.
+        gradient: isDark
+            ? NeonEffects.glass(tint: accent, opacity: glow ? 1.0 : 0.82)
+            : null,
+        color: isDark ? null : Colors.white,
         border: NeonEffects.border(
           isDark ? accent : accent.withValues(alpha: 0.5),
           alpha: isDark ? 0.22 : 0.18,
@@ -52,7 +54,11 @@ class NeonCard extends StatelessWidget {
       child: child,
     );
 
-    if (blur && isDark) {
+    // A backdrop blur samples whatever is painted behind it — including this
+    // card's own outer glow — which floods the interior with accent colour and
+    // turns a dark glass panel into a solid slab. Glowing cards therefore skip
+    // the blur; the glow already gives them all the separation they need.
+    if (blur && isDark && !glow) {
       surface = ClipRRect(
         borderRadius: borderRadius,
         child: BackdropFilter(

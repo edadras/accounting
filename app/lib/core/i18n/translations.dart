@@ -18,6 +18,13 @@ abstract final class BundledTranslations {
       'nav.reports': 'گزارش‌ها',
       'nav.settings': 'تنظیمات',
 
+      'reports.cashFlow': 'جریان نقدی',
+      'reports.net': 'خالص',
+      'budget.title': 'بودجه',
+      'budget.over': 'از بودجه گذشت',
+      'budget.remaining': 'مانده',
+      'budget.rollover': 'انتقال از ماه قبل',
+
       'auth.signIn': 'ورود',
       'auth.email': 'ایمیل',
       'auth.password': 'رمز عبور',
@@ -99,6 +106,13 @@ abstract final class BundledTranslations {
       'nav.accounts': 'Accounts',
       'nav.reports': 'Reports',
       'nav.settings': 'Settings',
+
+      'reports.cashFlow': 'Cash flow',
+      'reports.net': 'Net',
+      'budget.title': 'Budget',
+      'budget.over': 'Over budget',
+      'budget.remaining': 'Left',
+      'budget.rollover': 'Carried over',
 
       'auth.signIn': 'Sign in',
       'auth.email': 'Email',
@@ -182,6 +196,13 @@ abstract final class BundledTranslations {
       'nav.reports': 'Raporlar',
       'nav.settings': 'Ayarlar',
 
+      'reports.cashFlow': 'Nakit akışı',
+      'reports.net': 'Net',
+      'budget.title': 'Bütçe',
+      'budget.over': 'Bütçe aşıldı',
+      'budget.remaining': 'Kalan',
+      'budget.rollover': 'Devreden',
+
       'auth.signIn': 'Giriş yap',
       'auth.email': 'E-posta',
       'auth.password': 'Parola',
@@ -263,6 +284,13 @@ abstract final class BundledTranslations {
       'nav.accounts': 'الحسابات',
       'nav.reports': 'التقارير',
       'nav.settings': 'الإعدادات',
+
+      'reports.cashFlow': 'التدفق النقدي',
+      'reports.net': 'الصافي',
+      'budget.title': 'الميزانية',
+      'budget.over': 'تجاوز الميزانية',
+      'budget.remaining': 'المتبقي',
+      'budget.rollover': 'مرحّل',
 
       'auth.signIn': 'تسجيل الدخول',
       'auth.email': 'البريد الإلكتروني',

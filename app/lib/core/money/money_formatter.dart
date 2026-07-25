@@ -7,8 +7,8 @@ import 'money.dart';
 /// text; the isolate characters below stop the bidi algorithm from moving a
 /// minus sign or a currency symbol to the wrong end of the amount.
 abstract final class MoneyFormatter {
-  static const _fsi = '⁨'; // first strong isolate
-  static const _pdi = '⁩'; // pop directional isolate
+  static const _fsi = '\u{2068}'; // first strong isolate
+  static const _pdi = '\u{2069}'; // pop directional isolate
 
   /// [locale] drives digit shape and grouping separator.
   /// [compact] renders 1.2M / ۱٫۲M for dashboards where space is tight.
@@ -57,7 +57,7 @@ abstract final class MoneyFormatter {
     bool compact = false,
   }) {
     final text = format(money.absolute,
-        locale: locale, compact: compact, isolate: false);
+        locale: locale, compact: compact, isolate: false,);
     final sign = money.isNegative ? '−' : '+';
     return '$_fsi$sign$text$_pdi';
   }

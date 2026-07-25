@@ -4,12 +4,20 @@ Multi-platform client: Android, iOS, Web, Windows, macOS, Linux.
 
 ## Status
 
-Milestone **M2 (First App)** from [`docs/04-roadmap.md`](../docs/04-roadmap.md).
+Milestones **M2 (First App)** and the client half of **M3 (Budget & Reports)**
+from [`docs/04-roadmap.md`](../docs/04-roadmap.md).
+
+Five screens: Dashboard, Transactions, Reports (cash flow + budgets), Accounts,
+Settings — plus the quick-add sheet.
 
 The app runs standalone against an in-memory repository, so `flutter run` gives
 you a working, populated UI with no backend. Swapping in the real API is a
 single provider override — see `ledgerRepositoryProvider` in
 `lib/data/ledger_repository.dart`.
+
+**Verified:** `flutter analyze` clean, **30 tests passing** on Flutter 3.29 —
+unit tests for money and formatting, widget tests that boot the whole app in
+both writing directions, and 11 golden images.
 
 ## Running
 
@@ -18,11 +26,22 @@ flutter pub get
 flutter run            # add -d chrome / -d windows / -d linux as needed
 flutter test
 flutter analyze
+
+# Regenerate the golden images after an intentional visual change
+flutter test --update-goldens test/golden_test.dart
 ```
 
-> The platform runner directories (`android/`, `ios/`, `web/`, …) are not
-> committed. Generate them once with:
-> `flutter create --platforms=android,ios,web,windows,macos,linux .`
+> Only the `web/` runner is committed. Add the others once:
+> `flutter create --platforms=android,ios,windows,macos,linux .`
+
+## Goldens
+
+`test/goldens/` holds a rendered image of every screen in Persian (RTL) and
+English (LTR), plus one in the light theme. They are the only test that can
+catch a mirrored layout or a colour that stops meaning what it meant — both of
+which pass every behavioural assertion. Vazirmatn and the Material icon font
+are loaded explicitly in the test, because without them the engine draws boxes
+and the images become worthless.
 
 ## The neon design system
 
@@ -65,13 +84,22 @@ lib/
 │   ├── money/       Money, Currency, MoneyFormatter  (mirrors the backend)
 │   ├── i18n/        AppLocale, Translator, bundled fallback strings
 │   └── theme/       the neon design system
-├── domain/          entities, free of Flutter and of the API
+├── domain/          entities + analytics, free of Flutter and of the API
 ├── data/            repositories (in-memory today, API + Isar in M7)
 └── presentation/
     ├── widgets/     NeonCard, NeonButton, StatTile, NeonBarChart, …
-    ├── features/    dashboard, transactions, accounts, settings
+    ├── features/    dashboard, transactions, reports, accounts, settings
     └── shell.dart   nav bar + quick-add button
 ```
+
+### One trap worth remembering
+
+A Flutter `BoxDecoration` **ignores its `color` whenever a `gradient` is set**.
+Setting both — which is easy to do and reads as harmless — silently drops the
+fill, so a card becomes whatever is painted behind it. On a glowing card that
+meant its own halo bled through and turned a dark glass panel into a solid slab
+of accent colour. `NeonEffects.glass()` therefore blends the tint *into* the
+surface colour and returns one opaque gradient, and no widget passes both.
 
 ## Rules this client follows
 

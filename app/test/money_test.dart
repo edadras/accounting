@@ -9,7 +9,7 @@ void main() {
   group('Money', () {
     test('refuses to add two different currencies', () {
       expect(
-        () => Money(35000, Currency.try_) + Money(1000, Currency.usd),
+        () => const Money(35000, Currency.try_) + const Money(1000, Currency.usd),
         throwsArgumentError,
       );
     });
@@ -34,20 +34,20 @@ void main() {
     });
 
     test('converts across differing precision', () {
-      final rials = Money(500000, Currency.irr);
+      const rials = Money(500000, Currency.irr);
       expect(rials.convertTo(Currency.usd, 0.0000167).minorUnits, 835);
     });
 
     test('rounds half up in both directions', () {
-      expect(Money(5, Currency.usd).convertTo(Currency.eur, 0.5).minorUnits, 3);
-      expect(Money(-5, Currency.usd).convertTo(Currency.eur, 0.5).minorUnits, -3);
+      expect(const Money(5, Currency.usd).convertTo(Currency.eur, 0.5).minorUnits, 3);
+      expect(const Money(-5, Currency.usd).convertTo(Currency.eur, 0.5).minorUnits, -3);
     });
   });
 
   group('MoneyFormatter', () {
     test('uses persian digits and separators for fa', () {
       final text = MoneyFormatter.format(
-        Money(500000, Currency.irr),
+        const Money(500000, Currency.irr),
         locale: 'fa',
         showSymbol: false,
         isolate: false,
@@ -57,7 +57,7 @@ void main() {
 
     test('uses latin digits and a leading symbol for en', () {
       final text = MoneyFormatter.format(
-        Money(123456, Currency.usd),
+        const Money(123456, Currency.usd),
         locale: 'en',
         isolate: false,
       );
@@ -66,7 +66,7 @@ void main() {
 
     test('uses turkish separators for tr', () {
       final text = MoneyFormatter.format(
-        Money(123456, Currency.try_),
+        const Money(123456, Currency.try_),
         locale: 'tr',
         isolate: false,
       );
@@ -74,14 +74,14 @@ void main() {
     });
 
     test('isolates the amount so bidi cannot reorder it', () {
-      final text = MoneyFormatter.format(Money(1000, Currency.usd), locale: 'fa');
-      expect(text.startsWith('⁨'), isTrue);
-      expect(text.endsWith('⁩'), isTrue);
+      final text = MoneyFormatter.format(const Money(1000, Currency.usd), locale: 'fa');
+      expect(text.startsWith('\u{2068}'), isTrue);
+      expect(text.endsWith('\u{2069}'), isTrue);
     });
 
     test('signs amounts for transaction rows', () {
       final out = MoneyFormatter.formatSigned(
-        Money(-35000, Currency.try_),
+        const Money(-35000, Currency.try_),
         locale: 'en',
       );
       expect(out.contains('−'), isTrue);
@@ -90,7 +90,7 @@ void main() {
 
     test('compacts large amounts', () {
       final text = MoneyFormatter.format(
-        Money(320000000, Currency.try_),
+        const Money(320000000, Currency.try_),
         locale: 'en',
         compact: true,
         isolate: false,

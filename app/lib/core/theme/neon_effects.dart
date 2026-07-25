@@ -52,13 +52,25 @@ abstract final class NeonEffects {
 
   /// Glass fill for cards: a barely-there gradient so large surfaces are not
   /// dead flat.
-  static LinearGradient glass({Color tint = NeonPalette.cyan}) {
+  ///
+  /// The tint is blended *into* [base] rather than layered over it as a
+  /// translucent wash. A `BoxDecoration` ignores its `color` whenever a
+  /// `gradient` is present, so a translucent gradient would let whatever sits
+  /// behind the card — including the card's own outer glow — flood the
+  /// interior and turn a dark panel into a solid slab of accent colour.
+  static LinearGradient glass({
+    Color tint = NeonPalette.cyan,
+    Color base = NeonPalette.surface,
+    double opacity = 1.0,
+  }) {
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        tint.withValues(alpha: 0.06),
-        tint.withValues(alpha: 0.01),
+        Color.alphaBlend(tint.withValues(alpha: 0.07), base)
+            .withValues(alpha: opacity),
+        Color.alphaBlend(tint.withValues(alpha: 0.015), base)
+            .withValues(alpha: opacity),
       ],
     );
   }

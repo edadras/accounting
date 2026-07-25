@@ -57,7 +57,7 @@ final class Money implements Comparable<Money> {
           ? '$pi'
           : ai >= 0
               ? '$ai'
-              : char);
+              : char,);
     }
     return buffer.toString();
   }
