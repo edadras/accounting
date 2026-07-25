@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
+use Modules\Documents\Concerns\HasDocuments;
 
 /**
  * Somewhere money sits: a wallet, a bank account, a card, a petty cash box, a
@@ -19,6 +20,7 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Account extends Model
 {
     use BelongsToWorkspace;
+    use HasDocuments;
     use HasFactory;
     use HasUlidKey;
     use SoftDeletes;

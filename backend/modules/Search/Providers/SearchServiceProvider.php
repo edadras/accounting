@@ -6,6 +6,7 @@ namespace Modules\Search\Providers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
+use Modules\Search\Console\ReindexCommand;
 use Modules\Search\Contracts\SearchEngine;
 use Modules\Search\Engines\DatabaseSearchEngine;
 use Modules\Search\Support\SearchIndexer;
@@ -23,6 +24,10 @@ final class SearchServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
 
         $this->loadRoutesFrom(__DIR__.'/../Routes/api.php');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([ReindexCommand::class]);
+        }
 
         $this->keepIndexInStep();
     }

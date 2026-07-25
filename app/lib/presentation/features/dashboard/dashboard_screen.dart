@@ -11,6 +11,7 @@ import '../../../domain/entities.dart';
 import '../../widgets/neon_card.dart';
 import '../../widgets/neon_widgets.dart';
 import '../../widgets/transaction_row.dart';
+import '../more/more_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -96,6 +97,67 @@ class DashboardScreen extends ConsumerWidget {
                         .map((c) => c.name)
                         .firstOrNull,
                   ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          // Entry point to the six vertical modules. It sits at the foot of the
+          // dashboard rather than in the bottom bar: five tabs is already the
+          // most a thumb can aim at, and these are deliberate visits.
+          NeonCardShell(
+            key: const ValueKey('more-hub-entry'),
+            accent: NeonPalette.violet,
+            padding: const EdgeInsetsDirectional.all(18),
+            onTap: () => MoreScreen.open(context),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: NeonPalette.violet.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.apps_rounded,
+                    size: 19,
+                    color: NeonPalette.violet,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        t('more.title'),
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: NeonPalette.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        t('more.hint'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: NeonPalette.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Directionality.of(context) == TextDirection.rtl
+                      ? Icons.chevron_left_rounded
+                      : Icons.chevron_right_rounded,
+                  size: 20,
+                  color: NeonPalette.violet,
+                ),
               ],
             ),
           ),

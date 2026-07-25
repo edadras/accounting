@@ -13,10 +13,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
+use Modules\Documents\Concerns\HasDocuments;
 
 final class Transaction extends Model
 {
     use BelongsToWorkspace;
+    use HasDocuments;
     use HasFactory;
     use HasUlidKey;
     use SoftDeletes;

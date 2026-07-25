@@ -12,19 +12,23 @@ Finora یک **سیستم‌عامل مالی (Financial OS / Personal ERP)** ب�
 
 ## وضعیت پروژه
 
-| فاز | بخش | وضعیت |
-|---|---|---|
-| M0 | مستندات معماری و نقشه راه | ✅ |
-| M1 | هستهٔ مالی: Workspace، حساب، دسته، تراکنش دوطرفه | ✅ |
-| M2 | اپلیکیشن Flutter با Design System نئونی | ✅ |
-| M3 | بودجه و گزارش‌ها | ✅ |
-| M4 | اسناد و جستجو (با نرمال‌سازی فارسی) | ✅ |
-| M6 | بانک، چک، وام و اقساط | ✅ |
-| M8 | کسب‌وکار، ساختمان، سفر و تقسیم هزینه | ✅ |
-| M9 | سرمایه‌گذاری و دارایی | ✅ |
-| M5 | AI / OCR / ثبت صوتی / جستجوی معنایی | ⏳ |
-| M7 | Offline-First و موتور همگام‌سازی | ⏳ |
-| M10 | اشتراک، پرداخت و انتشار | ⏳ |
+هر ده فاز نقشه راه (M0 تا M10) پیاده‌سازی و تست شده است.
+
+| سنجه | مقدار |
+|---|---|
+| ماژول دامنه | **۱۸** |
+| تست Backend | **۳۵۸ تست / ۵۴۱۳ ادعا** — همه سبز |
+| تست اپ | **۱۴۶ تست + ۱۱ تصویر Golden** — سبز |
+| مسیر API | **۱۳۵** |
+
+**Backend** — Core، Ledger، Budget، Reports، Banking، Investment، Assets،
+Buildings، Business، Travel، Family، Recurring، Documents، Search، AI، Sync،
+Billing، Alerts.
+
+**اپ** — داشبورد، تراکنش‌ها، گزارش‌ها، حساب‌ها، تنظیمات، به‌علاوهٔ صفحات
+بانک، سرمایه‌گذاری، دارایی، سفر، ساختمان، کسب‌وکار و AI؛ چهار زبان با RTL واقعی.
+
+جزئیات آنچه عمداً باقی مانده در [`docs/04-roadmap.md`](docs/04-roadmap.md).
 
 ### اجرا
 
@@ -55,34 +59,13 @@ cd app     && flutter pub get && flutter run
 | [docs/01-architecture.md](docs/01-architecture.md) | معماری کلان، Backend، Flutter، زیرساخت |
 | [docs/02-modules.md](docs/02-modules.md) | کاتالوگ کامل ماژول‌ها و مرزهای دامنه |
 | [docs/03-data-model.md](docs/03-data-model.md) | مدل داده، جداول اصلی، چندارزی، دفتر کل |
-| [docs/04-roadmap.md](docs/04-roadmap.md) | **نقشه راه فازبندی‌شده (M0 تا M9)** |
+| [docs/04-roadmap.md](docs/04-roadmap.md) | **نقشه راه فازبندی‌شده (M0 تا M10)** |
 | [docs/05-api-conventions.md](docs/05-api-conventions.md) | قراردادهای REST API، نسخه‌بندی، خطاها |
 | [docs/06-i18n-rtl.md](docs/06-i18n-rtl.md) | چندزبانگی، Translation Database، RTL |
 | [docs/07-security.md](docs/07-security.md) | امنیت، رمزنگاری، دسترسی‌ها، Audit Log |
 | [docs/08-ai-layer.md](docs/08-ai-layer.md) | لایهٔ هوش مصنوعی، OCR، NLP، جستجوی معنایی |
 | [docs/09-sync-offline.md](docs/09-sync-offline.md) | Offline-First، موتور همگام‌سازی، حل تعارض |
 | [docs/10-quality-and-dod.md](docs/10-quality-and-dod.md) | استاندارد کیفیت، تست، CI/CD، Definition of Done |
-
----
-
-## شروع سریع (پس از فاز M1)
-
-```bash
-# Backend
-cp .env.example .env
-composer install
-php artisan key:generate
-php artisan migrate --seed
-php artisan horizon
-php artisan serve
-
-# Mobile / Desktop
-cd app
-flutter pub get
-flutter run
-```
-
-> این دستورات در فاز M1 فعال می‌شوند؛ فعلاً به عنوان قرارداد تیم ثبت شده‌اند.
 
 ---
 

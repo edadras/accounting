@@ -11,6 +11,7 @@ import '../../../data/ledger_repository.dart';
 import '../../../domain/entities.dart' as domain;
 import '../../widgets/neon_button.dart';
 import '../../widgets/neon_widgets.dart';
+import '../ai/ai_hub_screen.dart';
 
 /// Quick capture.
 ///
@@ -152,13 +153,46 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                   ),
                 ),
               ),
-              Text(
-                t('tx.new'),
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: NeonPalette.textPrimary,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t('tx.new'),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: NeonPalette.textPrimary,
+                      ),
+                    ),
+                  ),
+                  // The AI capture flows hang off the button people already
+                  // press to record money, rather than a tab of their own.
+                  // Kept to a text link so the sheet does not get taller.
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      navigator.push(AiHubScreen.route());
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded,
+                            size: 15, color: NeonPalette.violet,),
+                        const SizedBox(width: 6),
+                        Text(
+                          t('ai.entry'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: NeonPalette.violet,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
