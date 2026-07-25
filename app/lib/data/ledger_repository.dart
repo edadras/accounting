@@ -1,6 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'modules_repository.dart' show clockProvider;
+
 import '../core/money/currency.dart';
 import '../core/money/money.dart';
 import '../domain/analytics.dart';
@@ -24,11 +26,19 @@ abstract interface class LedgerRepository {
 /// offline-first contract in docs/09-sync-offline.md. Swapping this for the
 /// real store is a one-line provider override.
 final class InMemoryLedgerRepository implements LedgerRepository {
-  InMemoryLedgerRepository({required this.baseCurrency}) {
+  InMemoryLedgerRepository({required this.baseCurrency, DateTime? now})
+      : _now = now {
     _seed();
   }
 
   final Currency baseCurrency;
+
+  /// Fixed in tests. The seeded rows sit at offsets from "now", so a golden
+  /// image of a screen that prints a date would otherwise change every midnight
+  /// and fail a suite nobody had touched.
+  final DateTime? _now;
+
+  DateTime get _clock => _now ?? DateTime.now();
 
   final List<Account> _accounts = [];
   final List<Category> _categories = [];
@@ -72,7 +82,7 @@ final class InMemoryLedgerRepository implements LedgerRepository {
       Category(id: 'cat-salary', name: 'حقوق', path: '/salary', depth: 0),
     ]);
 
-    final now = DateTime.now();
+    final now = _clock;
     void add(
       TransactionType type,
       int minorUnits,
@@ -150,7 +160,7 @@ final class InMemoryLedgerRepository implements LedgerRepository {
 
   @override
   Future<DashboardSummary> summary() async {
-    final now = DateTime.now();
+    final now = _clock;
     final startOfDay = DateTime(now.year, now.month, now.day);
     final startOfMonth = DateTime(now.year, now.month);
 
@@ -250,7 +260,7 @@ final class InMemoryLedgerRepository implements LedgerRepository {
 
   @override
   Future<CashFlowReport> cashFlow({int months = 6}) async {
-    final now = DateTime.now();
+    final now = _clock;
     final buckets = <String, (int income, int expense)>{};
 
     for (var i = months - 1; i >= 0; i--) {
@@ -304,7 +314,10 @@ final class InMemoryLedgerRepository implements LedgerRepository {
 final baseCurrencyProvider = Provider<Currency>((ref) => Currency.try_);
 
 final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
-  return InMemoryLedgerRepository(baseCurrency: ref.watch(baseCurrencyProvider));
+  return InMemoryLedgerRepository(
+    baseCurrency: ref.watch(baseCurrencyProvider),
+    now: ref.watch(clockProvider),
+  );
 });
 
 /// Bumped after every write so the dependent providers refetch.

@@ -13,11 +13,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Modules\Core\Models\Workspace;
 use Modules\Core\Models\WorkspaceMember;
+use Modules\Security\Concerns\HasTwoFactorAuthentication;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, HasTwoFactorAuthentication, Notifiable;
 
     /** @var list<string> */
     protected $fillable = [
@@ -32,6 +33,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /** @return array<string, string> */
@@ -40,6 +43,12 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+
+            // Encrypted at rest: a leaked database must not hand anyone a
+            // working second factor (docs/07-security.md §3).
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 

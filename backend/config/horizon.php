@@ -284,20 +284,20 @@ return [
 
     'environments' => [
         'production' => [
-            'realtime'    => ['maxProcesses' => 6, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
-            'ocr'         => ['maxProcesses' => 4, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
-            'ai'          => ['maxProcesses' => 4, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
-            'media'       => ['maxProcesses' => 2, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
-            'reports'     => ['maxProcesses' => 2, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'realtime' => ['maxProcesses' => 6, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'ocr' => ['maxProcesses' => 4, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'ai' => ['maxProcesses' => 4, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'media' => ['maxProcesses' => 2, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
+            'reports' => ['maxProcesses' => 2, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
             'maintenance' => ['maxProcesses' => 2, 'balanceMaxShift' => 1, 'balanceCooldown' => 3],
         ],
 
         'local' => [
-            'realtime'    => ['maxProcesses' => 2],
-            'ocr'         => ['maxProcesses' => 1],
-            'ai'          => ['maxProcesses' => 1],
-            'media'       => ['maxProcesses' => 1],
-            'reports'     => ['maxProcesses' => 1],
+            'realtime' => ['maxProcesses' => 2],
+            'ocr' => ['maxProcesses' => 1],
+            'ai' => ['maxProcesses' => 1],
+            'media' => ['maxProcesses' => 1],
+            'reports' => ['maxProcesses' => 1],
             'maintenance' => ['maxProcesses' => 1],
         ],
     ],

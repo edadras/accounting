@@ -112,6 +112,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Embeddings
+    |--------------------------------------------------------------------------
+    |
+    | Semantic search (docs/08-ai-layer.md §4). The default driver is `local`:
+    | a hashed bag-of-words over the normalised text, expanded through the
+    | concept lexicon, computed in PHP with no key and no network. It is what
+    | the test suite runs against and what a self-hosted deployment gets, and
+    | it is good enough that «هزینه‌های ماشین» finds fuel and repairs.
+    |
+    | `http` swaps in a real embedding model over an OpenAI-compatible route.
+    | Nothing downstream changes — the store, the ranking and the endpoint are
+    | identical — but a remote call per saved row is not something to do inside
+    | a request, so embeddings are only written on save while the driver is
+    | local. With a remote driver, `search:embed` (or a queued job) is what
+    | keeps the index current.
+    |
+    */
+
+    'embeddings' => [
+        'driver' => env('AI_EMBEDDING_DRIVER', 'local'),
+
+        'dimensions' => (int) env('AI_EMBEDDING_DIMENSIONS', 256),
+
+        'model' => env('AI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+
+        'base_url' => env('AI_EMBEDDING_BASE_URL'),
+
+        'endpoint' => env('AI_EMBEDDING_ENDPOINT', 'embeddings'),
+
+        'key' => env('AI_EMBEDDING_KEY'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Insights
     |--------------------------------------------------------------------------
     |

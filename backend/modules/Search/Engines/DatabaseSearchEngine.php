@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Search\Engines;
 
-use Modules\Documents\Models\Document;
-use Modules\Ledger\Models\Category;
-use Modules\Ledger\Models\Transaction;
 use Modules\Search\Contracts\SearchEngine;
 use Modules\Search\Models\SearchEntry;
+use Modules\Search\Support\ResultHydrator;
 use Modules\Search\Support\TextNormalizer;
 
 /**
@@ -27,6 +25,8 @@ final class DatabaseSearchEngine implements SearchEngine
      */
     private const LIKE_ESCAPE = '#';
 
+    public function __construct(private readonly ResultHydrator $hydrator) {}
+
     public function search(string $query, array $types = [], int $limit = self::DEFAULT_LIMIT): array
     {
         $types = $this->resolveTypes($types);
@@ -42,17 +42,7 @@ final class DatabaseSearchEngine implements SearchEngine
         $pattern = '%'.$this->escapeLike($needle).'%';
 
         foreach ($types as $type) {
-            $ids = $this->matchingIds($type, $pattern, $limit);
-
-            if ($ids === []) {
-                continue;
-            }
-
-            $results[$type] = match ($type) {
-                self::TYPE_TRANSACTIONS => $this->transactions($ids),
-                self::TYPE_DOCUMENTS => $this->documents($ids),
-                self::TYPE_CATEGORIES => $this->categories($ids),
-            };
+            $results[$type] = $this->hydrator->hydrate($type, $this->matchingIds($type, $pattern, $limit));
         }
 
         return $results;
@@ -68,80 +58,6 @@ final class DatabaseSearchEngine implements SearchEngine
             ->orderByDesc('id')
             ->limit($limit)
             ->pluck('indexable_id')
-            ->all();
-    }
-
-    /**
-     * @param  list<string>  $ids
-     * @return list<array<string, mixed>>
-     */
-    private function transactions(array $ids): array
-    {
-        return Transaction::query()
-            ->with('category:id,name,path')
-            ->whereIn('id', $ids)
-            ->orderByDesc('occurred_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (Transaction $transaction): array => [
-                'id' => $transaction->id,
-                'type' => $transaction->type,
-                'description' => $transaction->description,
-                'payee' => $transaction->payee,
-                'notes' => $transaction->notes,
-                'amount' => [
-                    'value' => $transaction->amount,
-                    'currency' => $transaction->currency,
-                ],
-                'occurred_at' => $transaction->occurred_at?->toIso8601String(),
-                'category' => $transaction->category === null ? null : [
-                    'id' => $transaction->category->id,
-                    'name' => $transaction->category->name,
-                    'path' => $transaction->category->path,
-                ],
-            ])
-            ->all();
-    }
-
-    /**
-     * @param  list<string>  $ids
-     * @return list<array<string, mixed>>
-     */
-    private function documents(array $ids): array
-    {
-        return Document::query()
-            ->whereIn('id', $ids)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (Document $document): array => [
-                'id' => $document->id,
-                'original_name' => $document->original_name,
-                'kind' => $document->kind,
-                'mime' => $document->mime,
-                'size' => $document->size,
-                'ocr_status' => $document->ocr_status,
-            ])
-            ->all();
-    }
-
-    /**
-     * @param  list<string>  $ids
-     * @return list<array<string, mixed>>
-     */
-    private function categories(array $ids): array
-    {
-        return Category::query()
-            ->whereIn('id', $ids)
-            ->orderBy('path')
-            ->get()
-            ->map(fn (Category $category): array => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'path' => $category->path,
-                'type' => $category->type,
-                'depth' => $category->depth,
-            ])
             ->all();
     }
 

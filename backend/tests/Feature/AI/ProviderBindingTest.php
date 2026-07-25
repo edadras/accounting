@@ -61,13 +61,17 @@ final class ProviderBindingTest extends AiTestCase
     #[Test]
     public function the_registry_exposes_exactly_the_documented_tools(): void
     {
+        // The eight of docs/08-ai-layer.md §5, and nothing else: the reachable
+        // surface of the chat is this list.
         $this->assertEqualsCanonicalizing([
             'get_spending_summary',
             'get_transactions',
             'get_budget_status',
             'get_account_balances',
+            'get_investment_performance',
             'get_upcoming_obligations',
             'get_cashflow_forecast',
+            'create_budget_draft',
         ], array_keys(app(ToolRegistry::class)->all()));
     }
 

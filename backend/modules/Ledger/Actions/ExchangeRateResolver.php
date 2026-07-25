@@ -11,14 +11,20 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Resolves "1 unit of $from buys how many units of $to", in major units.
  *
- * M1 reads the latest stored rate and falls back to the seeded table. M6
- * replaces the fallback with a scheduled provider fetch; nothing else has to
+ * M1 reads the latest stored rate and falls back to the seeded table. M6 adds
+ * the scheduled provider fetch that fills that table; nothing else has to
  * change because callers only ever see this interface.
  */
 final class ExchangeRateResolver
 {
-    /** Seed rates so the ledger is usable before any provider is wired up. */
-    private const FALLBACK_TO_USD = [
+    /**
+     * Seed rates so the ledger is usable before any provider is wired up.
+     *
+     * Public because MarketData's StaticProvider is the other reader: with no
+     * feed configured it fetches these same numbers, so installing the module
+     * cannot move a balance. One table, one set of values, no drift.
+     */
+    public const FALLBACK_TO_USD = [
         'USD' => 1.0,
         'EUR' => 1.09,
         'TRY' => 0.031,
@@ -43,6 +49,19 @@ final class ExchangeRateResolver
         $key = $from->code.'>'.$to->code;
 
         return $this->memo[$key] ??= $this->lookup($from, $to);
+    }
+
+    /**
+     * Drops the memoised rates.
+     *
+     * The resolver is a singleton, so a worker that has already answered for a
+     * pair would keep answering with that number for the life of the process.
+     * MarketData calls this after storing fresh rates; without it a refresh
+     * would have no effect until the worker restarted.
+     */
+    public function forget(): void
+    {
+        $this->memo = [];
     }
 
     private function lookup(Currency $from, Currency $to): string

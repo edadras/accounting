@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Modules\Audit\Support\AuditRecorder;
 use Modules\Core\Actions\CreateWorkspace;
+use Modules\Security\Actions\IssueTwoFactorChallenge;
 
 final class AuthController
 {
@@ -76,6 +77,18 @@ final class AuthController
                     'message' => 'Wrong email or password.',
                 ],
             ], 401);
+        }
+
+        // With a confirmed second factor the password stops being enough on its
+        // own, so the answer here is a short-lived challenge rather than a
+        // usable token; POST auth/2fa/verify trades it for one.
+        if ($user->hasTwoFactorEnabled()) {
+            app(AuditRecorder::class)->record('auth.two_factor_challenged', $user);
+
+            return response()->json([
+                'data' => ['two_factor_required' => true]
+                    + app(IssueTwoFactorChallenge::class)->handle($user),
+            ]);
         }
 
         app(AuditRecorder::class)->record('auth.login', $user);

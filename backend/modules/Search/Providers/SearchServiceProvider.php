@@ -6,17 +6,26 @@ namespace Modules\Search\Providers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
+use Modules\Search\Console\EmbedCommand;
 use Modules\Search\Console\ReindexCommand;
 use Modules\Search\Contracts\SearchEngine;
 use Modules\Search\Engines\DatabaseSearchEngine;
+use Modules\Search\Engines\MeilisearchEngine;
 use Modules\Search\Support\SearchIndexer;
 
 final class SearchServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Swapping in Meilisearch is this one line.
-        $this->app->bind(SearchEngine::class, DatabaseSearchEngine::class);
+        $this->mergeConfigFrom(__DIR__.'/../Config/search.php', 'search');
+
+        // The database engine stays the default, and stays the thing that
+        // works with nothing installed and nothing running. Meilisearch is
+        // opt-in per deployment, and because both sit behind the same
+        // contract, nothing but this line knows which one answered.
+        $this->app->bind(SearchEngine::class, fn () => config('search.driver') === 'meilisearch'
+            ? $this->app->make(MeilisearchEngine::class)
+            : $this->app->make(DatabaseSearchEngine::class));
     }
 
     public function boot(): void
@@ -25,8 +34,12 @@ final class SearchServiceProvider extends ServiceProvider
 
         $this->loadRoutesFrom(__DIR__.'/../Routes/api.php');
 
+        $this->publishes([
+            __DIR__.'/../Config/search.php' => config_path('search.php'),
+        ], 'search-config');
+
         if ($this->app->runningInConsole()) {
-            $this->commands([ReindexCommand::class]);
+            $this->commands([ReindexCommand::class, EmbedCommand::class]);
         }
 
         $this->keepIndexInStep();

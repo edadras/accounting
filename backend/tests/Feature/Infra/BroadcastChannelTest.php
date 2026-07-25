@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Infra;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Broadcast;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,7 +21,7 @@ final class BroadcastChannelTest extends LedgerTestCase
 {
     use RefreshDatabase;
 
-    private function authorizes(\App\Models\User $user, string $workspaceId): bool
+    private function authorizes(User $user, string $workspaceId): bool
     {
         // Resolve the channel callback the same way the framework does when an
         // authorisation request arrives.
@@ -76,8 +77,8 @@ final class BroadcastChannelTest extends LedgerTestCase
 
         $member = $this->makeUser('leaving-c@example.test');
         $membership = $workspace->members()->create([
-            'user_id'   => $member->id,
-            'role'      => 'member',
+            'user_id' => $member->id,
+            'role' => 'member',
             'joined_at' => now(),
         ]);
 

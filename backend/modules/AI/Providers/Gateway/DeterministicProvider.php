@@ -51,6 +51,7 @@ final class DeterministicProvider implements AiProvider
             PromptBuilder::TASK_CATEGORIZE => $this->categorize($user),
             PromptBuilder::TASK_CHAT => $this->chat($user, $tools),
             PromptBuilder::TASK_PHRASE_INSIGHT => $this->phrase($user),
+            PromptBuilder::TASK_SEARCH_FILTER => $this->searchFilter($user),
             default => new AiResponse('', [], $this->name()),
         };
     }
@@ -174,6 +175,7 @@ final class DeterministicProvider implements AiProvider
         $intents = [
             'get_upcoming_obligations' => ['قبض', 'چک', 'قسط', 'سررسید', 'عقب افتاده', 'سررسیده', 'bill', 'bills', 'due', 'installment', 'cheque', 'check', 'upcoming', 'overdue'],
             'get_cashflow_forecast' => ['پیش بینی', 'جریان نقدی', 'تا پایان ماه', 'کم بیارم', 'کمبود', 'forecast', 'cash flow', 'cashflow', 'end of the month', 'runway'],
+            'get_investment_performance' => ['سرمایه', 'سرمایه گذاری', 'پرتفوی', 'سبد دارایی', 'بازده', 'سود بیشتری', 'سهام', 'طلا', 'دارایی', 'investment', 'investments', 'portfolio', 'holding', 'holdings', 'roi', 'return on', 'best performing'],
             'get_budget_status' => ['بودجه', 'سقف', 'budget', 'budgets'],
             'get_account_balances' => ['موجودی', 'مانده', 'حسابهایم', 'balance', 'balances', 'accounts'],
             'get_transactions' => ['تراکنش', 'فهرست', 'لیست', 'نشان بده', 'خریدهای', 'transactions', 'list', 'show me', 'show my'],
@@ -192,7 +194,48 @@ final class DeterministicProvider implements AiProvider
             }
         }
 
+        // «بودجهٔ ماه آینده را تنظیم کن» is a question about budgets, so it has
+        // already matched the status tool. But the user asked to be given a
+        // budget, not shown one, and reporting this period's figures would be
+        // answering a different question.
+        if ($this->wantsBudgetDraft($question)) {
+            array_unshift($wanted, 'create_budget_draft');
+
+            $wanted = array_values(array_diff($wanted, ['get_budget_status', 'get_spending_summary']));
+        }
+
         return $wanted;
+    }
+
+    /**
+     * A budget word plus an intent to obtain one.
+     *
+     * Deliberately a conjunction rather than two more rows in the keyword
+     * table: «تنظیم کن» on its own is any imperative at all, and a bare
+     * «بودجه» is the existing status question. Only the pair means "propose
+     * one for me".
+     */
+    private function wantsBudgetDraft(string $question): bool
+    {
+        $subjects = ['بودجه', 'سقف خرج', 'budget'];
+        $intents = [
+            'تنظیم کن', 'بساز', 'پیشنهاد', 'بچین', 'بنویس', 'درست کن', 'ماه آینده', 'ماه بعد', 'سال آینده',
+            'draft', 'propose', 'suggest', 'plan', 'set up', 'set a', 'create', 'make me', 'next month', 'next year',
+        ];
+
+        return $this->mentions($question, $subjects) && $this->mentions($question, $intents);
+    }
+
+    /** @param list<string> $keywords */
+    private function mentions(string $question, array $keywords): bool
+    {
+        foreach ($keywords as $keyword) {
+            if (str_contains($question, TextNormalizerBridge::normalize($keyword))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array<string, mixed> */
@@ -202,6 +245,8 @@ final class DeterministicProvider implements AiProvider
             'get_transactions' => ['limit' => 20] + $this->window($question),
             'get_spending_summary' => ['group_by' => 'category'] + $this->window($question),
             'get_upcoming_obligations', 'get_cashflow_forecast' => ['days' => 30],
+            'get_investment_performance' => ['limit' => 10],
+            'create_budget_draft' => ['months' => 3],
             default => [],
         };
     }
@@ -249,6 +294,8 @@ final class DeterministicProvider implements AiProvider
                 'get_budget_status' => $this->composeBudgets($data, $fa),
                 'get_upcoming_obligations' => $this->composeObligations($data, $fa),
                 'get_cashflow_forecast' => $this->composeForecast($data, $fa),
+                'get_investment_performance' => $this->composeInvestments($data, $fa),
+                'create_budget_draft' => $this->composeBudgetDraft($data, $fa),
                 default => '',
             };
         }
@@ -365,6 +412,134 @@ final class DeterministicProvider implements AiProvider
                 .($data['to'] ?? '')." برابر {$projected} است."
             : "Carrying the last {$days} days forward and allowing {$obligations} of obligations, the projected "
                 .'balance on '.($data['to'] ?? '')." is {$projected}.";
+    }
+
+    /** @param array<string, mixed> $data */
+    private function composeInvestments(array $data, bool $fa): string
+    {
+        $positions = (array) ($data['positions'] ?? []);
+
+        if ($positions === []) {
+            return $fa ? 'هیچ سرمایه‌گذاری ثبت نشده است.' : 'There are no investments recorded.';
+        }
+
+        $currency = (string) ($data['currency'] ?? 'USD');
+        $portfolio = (array) ($data['portfolio'] ?? []);
+        $best = $positions[0];
+
+        $lines = [$fa
+            ? sprintf(
+                'بیشترین سود مربوط به %s است: %s (بازده %s%%).',
+                (string) ($best['name'] ?? '؟'),
+                $this->money((int) ($best['total_profit_in_base'] ?? 0), $currency),
+                $this->percent((float) ($best['roi_percent'] ?? 0)),
+            )
+            : sprintf(
+                '%s has returned the most: %s (ROI %s%%).',
+                (string) ($best['name'] ?? '?'),
+                $this->money((int) ($best['total_profit_in_base'] ?? 0), $currency),
+                $this->percent((float) ($best['roi_percent'] ?? 0)),
+            )];
+
+        foreach ($positions as $position) {
+            $lines[] = '- '.($position['name'] ?? '?').': '
+                .($fa ? 'محقق‌شده ' : 'realised ')
+                .$this->money((int) ($position['realized_profit_in_base'] ?? 0), $currency)
+                .($fa ? '، تحقق‌نیافته ' : ', unrealised ')
+                .$this->money((int) ($position['unrealized_profit_in_base'] ?? 0), $currency)
+                .' ('.$this->percent((float) ($position['roi_percent'] ?? 0)).'%)';
+        }
+
+        $lines[] = $fa
+            ? sprintf(
+                'مجموع پرتفوی: ارزش %s در برابر بهای تمام‌شدهٔ %s، سود کل %s.',
+                $this->money((int) ($portfolio['current_value'] ?? 0), $currency),
+                $this->money((int) ($portfolio['cost_basis'] ?? 0), $currency),
+                $this->money((int) ($portfolio['total_profit'] ?? 0), $currency),
+            )
+            : sprintf(
+                'Portfolio: %s against a cost of %s, total profit %s.',
+                $this->money((int) ($portfolio['current_value'] ?? 0), $currency),
+                $this->money((int) ($portfolio['cost_basis'] ?? 0), $currency),
+                $this->money((int) ($portfolio['total_profit'] ?? 0), $currency),
+            );
+
+        return implode("\n", $lines);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function composeBudgetDraft(array $data, bool $fa): string
+    {
+        $currency = (string) ($data['currency'] ?? 'USD');
+        $overall = (array) ($data['overall'] ?? []);
+        $basis = (array) ($data['based_on'] ?? []);
+
+        $lines = [$fa
+            ? sprintf(
+                'این یک پیشنهاد است و تا وقتی تأیید نکنید ثبت نمی‌شود. بر اساس %d تراکنش بین %s و %s، برای %s پیشنهاد می‌شود:',
+                (int) ($basis['transaction_count'] ?? 0),
+                (string) ($basis['from'] ?? ''),
+                (string) ($basis['to'] ?? ''),
+                (string) ($data['period'] ?? ''),
+            )
+            : sprintf(
+                'This is a proposal and is saved only once you confirm it. Based on %d transactions between %s and %s, here is a draft for %s:',
+                (int) ($basis['transaction_count'] ?? 0),
+                (string) ($basis['from'] ?? ''),
+                (string) ($basis['to'] ?? ''),
+                (string) ($data['period'] ?? ''),
+            )];
+
+        $lines[] = '- '.($fa ? 'کل' : 'overall').': '
+            .$this->money((int) ($overall['suggested_amount'] ?? 0), $currency);
+
+        foreach ((array) ($data['lines'] ?? []) as $line) {
+            $lines[] = '- '.($line['name'] ?? '?').': '
+                .$this->money((int) ($line['suggested_amount'] ?? 0), $currency)
+                .($fa ? ' (میانگین ماهانه ' : ' (monthly average ')
+                .$this->money((int) ($line['average_monthly'] ?? 0), $currency).')';
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * The structured half of a semantic search (docs/08-ai-layer.md §4): the
+     * filter that narrows the corpus before similarity re-ranks what is left.
+     *
+     * Only ever derived from the query the user typed — never from anything
+     * the search then finds — for the same reason tool selection is.
+     */
+    private function searchFilter(string $payload): AiResponse
+    {
+        $query = TextNormalizerBridge::forParsing(PromptBuilder::extract($payload, 'query') ?? '');
+        $now = CarbonImmutable::now();
+
+        $type = match (true) {
+            $this->mentions($query, ['درآمد', 'حقوق', 'دریافتی', 'واریز', 'income', 'salary', 'earned', 'received']) => 'income',
+            $this->mentions($query, ['هزینه', 'خرج', 'پرداخت', 'خرید', 'expense', 'expenses', 'spend', 'spent', 'cost', 'paid', 'bought']) => 'expense',
+            $this->mentions($query, ['انتقال', 'جابجایی', 'transfer']) => 'transfer',
+            default => null,
+        };
+
+        $range = match (true) {
+            $this->mentions($query, ['پارسال', 'سال گذشته', 'سال پیش', 'last year']) => [$now->subYear()->startOfYear(), $now->subYear()->endOfYear()],
+            $this->mentions($query, ['امسال', 'this year']) => [$now->startOfYear(), $now->endOfYear()],
+            $this->mentions($query, ['ماه پیش', 'ماه گذشته', 'last month']) => [$now->subMonthNoOverflow()->startOfMonth(), $now->subMonthNoOverflow()->endOfMonth()],
+            $this->mentions($query, ['این ماه', 'ماه جاری', 'this month']) => [$now->startOfMonth(), $now->endOfMonth()],
+            default => null,
+        };
+
+        return $this->jsonResponse([
+            'type' => $type,
+            'from' => $range === null ? null : $range[0]->toDateString(),
+            'to' => $range === null ? null : $range[1]->toDateString(),
+        ]);
+    }
+
+    private function percent(float $value): string
+    {
+        return number_format($value, 2, '.', '');
     }
 
     private function phrase(string $payload): AiResponse

@@ -16,14 +16,14 @@ Finora یک **سیستم‌عامل مالی (Financial OS / Personal ERP)** ب�
 
 | سنجه | مقدار |
 |---|---|
-| ماژول دامنه | **۲۰** |
-| تست Backend | **۳۸۸ تست / ۵۵۰۰ ادعا** — همه سبز |
+| ماژول دامنه | **۲۴** |
+| تست Backend | **۵۶۷ تست / ۶۳۸۷ ادعا** — همه سبز |
 | تست اپ | **۱۵۲ تست + ۱۱ تصویر Golden** — همه سبز |
-| مسیر API | **۱۴۶** |
+| مسیر API | **۱۷۵** |
 
 **Backend** — Core، Ledger، Budget، Reports، Banking، Investment، Assets،
 Buildings، Business، Travel، Family، Recurring، Documents، Search، AI، Sync،
-Billing، Alerts، Audit، I18n.
+Billing، Alerts، Audit، I18n، Security، DataOps، MarketData، Capture.
 
 **اپ** — داشبورد، تراکنش‌ها، گزارش‌ها، حساب‌ها، تنظیمات، به‌علاوهٔ صفحات
 بانک، سرمایه‌گذاری، دارایی، سفر، ساختمان، کسب‌وکار و AI؛ چهار زبان با RTL واقعی.

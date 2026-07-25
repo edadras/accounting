@@ -8,14 +8,19 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Modules\AI\Contracts\AiProvider;
+use Modules\AI\Contracts\EmbeddingProvider;
 use Modules\AI\Contracts\Tool;
 use Modules\AI\Exceptions\AiException;
 use Modules\AI\Providers\Gateway\DeterministicProvider;
+use Modules\AI\Providers\Gateway\HttpEmbeddingProvider;
+use Modules\AI\Providers\Gateway\LocalEmbeddingProvider;
 use Modules\AI\Providers\Gateway\OpenAiProvider;
 use Modules\AI\Support\AudioNormalizer;
+use Modules\AI\Tools\CreateBudgetDraft;
 use Modules\AI\Tools\GetAccountBalances;
 use Modules\AI\Tools\GetBudgetStatus;
 use Modules\AI\Tools\GetCashflowForecast;
+use Modules\AI\Tools\GetInvestmentPerformance;
 use Modules\AI\Tools\GetSpendingSummary;
 use Modules\AI\Tools\GetTransactions;
 use Modules\AI\Tools\GetUpcomingObligations;
@@ -38,6 +43,11 @@ final class AIServiceProvider extends ServiceProvider
         GetAccountBalances::class,
         GetUpcomingObligations::class,
         GetCashflowForecast::class,
+        GetInvestmentPerformance::class,
+
+        // Named `create_…` but incapable of creating anything: it returns a
+        // proposal for the user to accept or throw away. See the class.
+        CreateBudgetDraft::class,
     ];
 
     public function register(): void
@@ -51,6 +61,13 @@ final class AIServiceProvider extends ServiceProvider
         $this->app->bind(AiProvider::class, fn () => filled(config('ai.key'))
             ? $this->app->make(OpenAiProvider::class)
             : $this->app->make(DeterministicProvider::class));
+
+        // Embeddings are bound separately from chat: a deployment may well
+        // want a real embedding model behind its search while chat runs on
+        // rules, or the other way round.
+        $this->app->bind(EmbeddingProvider::class, fn () => config('ai.embeddings.driver') === 'http'
+            ? $this->app->make(HttpEmbeddingProvider::class)
+            : $this->app->make(LocalEmbeddingProvider::class));
 
         $this->app->singleton(AudioNormalizer::class);
 

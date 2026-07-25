@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:finora/core/i18n/app_locale.dart';
 import 'package:finora/core/i18n/translator.dart';
 import 'package:finora/main.dart';
+import 'package:finora/data/modules_repository.dart';
 import 'package:finora/presentation/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// because a mirrored layout still passes every behavioural test.
 ///
 /// Regenerate with: `flutter test --update-goldens test/golden_test.dart`
+/// Pinned so the goldens describe a layout, not a date.
+final _fixedNow = DateTime.utc(2026, 7, 25, 12);
+
 void main() {
   setUpAll(() async {
     // Without a real font the engine draws Ahem boxes and every golden becomes
@@ -53,6 +57,10 @@ void main() {
             overrides: [
               localeProvider.overrideWith((ref) => locale),
               selectedTabProvider.overrideWith((ref) => tabIndex),
+              // Seeded rows sit at offsets from "now" and the transaction list
+              // prints their dates, so without a fixed clock these images would
+              // change at every midnight and fail a suite nobody had touched.
+              clockProvider.overrideWithValue(_fixedNow),
             ],
             child: const FinoraApp(),
           ),
@@ -77,6 +85,7 @@ void main() {
         overrides: [
           localeProvider.overrideWith((ref) => AppLocale.fa),
           themeModeProvider.overrideWith((ref) => ThemeMode.light),
+          clockProvider.overrideWithValue(_fixedNow),
         ],
         child: const FinoraApp(),
       ),

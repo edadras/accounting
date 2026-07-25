@@ -27,6 +27,8 @@ final class PromptBuilder
 
     public const TASK_PHRASE_INSIGHT = 'finora.phrase_insight';
 
+    public const TASK_SEARCH_FILTER = 'finora.search_filter';
+
     private const DATA_OPEN = '<<<UNTRUSTED_DATA:%s>>>';
 
     private const DATA_CLOSE = '<<<END_UNTRUSTED_DATA:%s>>>';
