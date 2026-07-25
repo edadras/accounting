@@ -382,6 +382,9 @@ final class InMemoryModulesRepository implements ModulesRepository {
         baseCurrency: baseCurrency,
         members: istanbul,
         expenses: [
+          // Coordinates mirror `split_expenses.latitude/longitude`, which the
+          // API already returns. The museum outing carries none, so the map
+          // has something real to report as unplaced.
           SplitExpense(
             id: 'sx-hotel',
             title: 'هتل',
@@ -389,6 +392,8 @@ final class InMemoryModulesRepository implements ModulesRepository {
             payerId: 'tm-ali',
             participantIds: istanbulIds,
             occurredAt: _days(-21),
+            latitude: 41.0054,
+            longitude: 28.9768,
           ),
           SplitExpense(
             id: 'sx-flight',
@@ -397,6 +402,8 @@ final class InMemoryModulesRepository implements ModulesRepository {
             payerId: 'tm-sara',
             participantIds: istanbulIds,
             occurredAt: _days(-24),
+            latitude: 41.2753,
+            longitude: 28.7519,
           ),
           SplitExpense(
             id: 'sx-food',
@@ -405,6 +412,8 @@ final class InMemoryModulesRepository implements ModulesRepository {
             payerId: 'tm-reza',
             participantIds: istanbulIds,
             occurredAt: _days(-18),
+            latitude: 41.0369,
+            longitude: 28.9850,
           ),
           SplitExpense(
             id: 'sx-museum',
@@ -432,6 +441,8 @@ final class InMemoryModulesRepository implements ModulesRepository {
             payerId: 'tk-ali',
             participantIds: kishIds,
             occurredAt: _days(-90),
+            latitude: 26.5578,
+            longitude: 53.9810,
           ),
           SplitExpense(
             id: 'sk-car',
@@ -440,6 +451,8 @@ final class InMemoryModulesRepository implements ModulesRepository {
             payerId: 'tk-nima',
             participantIds: kishIds,
             occurredAt: _days(-88),
+            latitude: 26.5341,
+            longitude: 54.0210,
           ),
         ],
       ),

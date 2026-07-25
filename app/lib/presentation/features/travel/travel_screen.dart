@@ -11,6 +11,7 @@ import '../../../domain/travel.dart';
 import '../../widgets/neon_widgets.dart';
 import '../more/module_scaffold.dart';
 import 'trip_detail_screen.dart';
+import 'trip_map_screen.dart';
 
 class TravelScreen extends ConsumerWidget {
   const TravelScreen({super.key});
@@ -58,6 +59,7 @@ class TripCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(translatorProvider);
     final transfers = trip.settlements();
+    final placed = trip.expenses.where((e) => e.hasLocation).length;
 
     return NeonCardShell(
       accent: NeonPalette.lime,
@@ -131,6 +133,25 @@ class TripCard extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            // The count is the point of the chip: a trip with no placed
+            // expenses says so here rather than opening a blank plot.
+            child: NeonChip(
+              key: ValueKey('trip-map-${trip.id}'),
+              label: placed == 0
+                  ? t('travel.mapEmptyShort')
+                  : t('travel.mapPlaced', args: {
+                      'count': DateFormatter.number(placed, localeCode),
+                    },),
+              accent: placed == 0 ? NeonPalette.textMuted : NeonPalette.violet,
+              selected: placed > 0,
+              icon: Icons.map_rounded,
+              onTap: () =>
+                  Navigator.of(context).push(TripMapScreen.route(trip)),
+            ),
           ),
         ],
       ),

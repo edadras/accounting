@@ -23,6 +23,8 @@ final class SplitExpense {
     required this.occurredAt,
     this.mode = SplitMode.equal,
     this.exactShares = const {},
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
@@ -35,6 +37,15 @@ final class SplitExpense {
 
   /// Member id → minor units, used only when [mode] is [SplitMode.exact].
   final Map<String, int> exactShares;
+
+  /// Where the money was spent, as `split_expenses.latitude` /
+  /// `.longitude` hold it. Both nullable and always read as a pair: half a
+  /// coordinate places nothing, so [hasLocation] is the only way anything
+  /// should ask.
+  final double? latitude;
+  final double? longitude;
+
+  bool get hasLocation => latitude != null && longitude != null;
 
   /// Member id → what that member owes for this expense.
   ///
