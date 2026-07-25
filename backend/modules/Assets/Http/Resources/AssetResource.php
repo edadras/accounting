@@ -27,7 +27,7 @@ final class AssetResource extends JsonResource
             'purchase_price' => self::money($this->purchasePrice()),
             'current_value' => self::money($this->currentValue()),
             'salvage_value' => self::money($this->salvageValue()),
-            'purchase_date' => $this->purchase_date?->toDateString(),
+            'purchase_date' => $this->purchase_date->toDateString(),
 
             'depreciation' => [
                 'method' => $this->depreciation_method,

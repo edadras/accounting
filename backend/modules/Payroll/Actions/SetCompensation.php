@@ -39,7 +39,7 @@ final readonly class SetCompensation
             throw PayrollException::unknownPayPeriod((string) $period);
         }
 
-        $effectiveFrom = isset($data['effective_from']) && $data['effective_from'] !== null
+        $effectiveFrom = isset($data['effective_from'])
             ? CarbonImmutable::parse($data['effective_from'])->startOfDay()
             : $employee->started_on;
 

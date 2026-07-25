@@ -12,7 +12,6 @@ declare(strict_types=1);
  * is documented rather than smoothed over, because a client written against a
  * smoothed-over spec breaks on the module that does it differently.
  */
-
 $str = fn (string $d = '', array $x = []): array => array_merge(['type' => 'string'], $d === '' ? [] : ['description' => $d], $x);
 $int = fn (string $d = '', array $x = []): array => array_merge(['type' => 'integer'], $d === '' ? [] : ['description' => $d], $x);
 $num = fn (string $d = '', array $x = []): array => array_merge(['type' => 'number'], $d === '' ? [] : ['description' => $d], $x);
@@ -62,7 +61,7 @@ return [
         'title' => 'Money',
         'description' => "An exact monetary amount.\n\n"
             ."`value` is an INTEGER count of the currency's minor units — never a decimal, never "
-            ."a float. `minor_unit` is how many decimal places that currency has, and it is what "
+            .'a float. `minor_unit` is how many decimal places that currency has, and it is what '
             ."makes `value` interpretable:\n\n"
             ."- `{\"value\": 35000, \"currency\": \"TRY\", \"minor_unit\": 2}` is **₺350.00**\n"
             ."- `{\"value\": 35000, \"currency\": \"IRR\", \"minor_unit\": 0}` is **35,000 rials**\n"
@@ -117,11 +116,11 @@ return [
     'BillingMoney' => [
         'type' => 'object',
         'title' => 'Money (Billing module key naming)',
-        'description' => "**Naming inconsistency, documented rather than hidden.** The Billing "
-            ."module serialises `App\\Core\\Money\\Money` directly, which names the integer field "
-            ."`amount`. Every other module wraps it in a Resource that renames the field to "
-            ."`value`. Same meaning, same units — different key. Applies to `Plan.price` and "
-            ."`SubscriptionInvoice.amount`.",
+        'description' => '**Naming inconsistency, documented rather than hidden.** The Billing '
+            .'module serialises `App\\Core\\Money\\Money` directly, which names the integer field '
+            .'`amount`. Every other module wraps it in a Resource that renames the field to '
+            .'`value`. Same meaning, same units — different key. Applies to `Plan.price` and '
+            .'`SubscriptionInvoice.amount`.',
         'required' => ['amount', 'currency', 'minor_unit', 'decimal'],
         'properties' => [
             'amount' => $int('Integer amount in minor units. Called `value` everywhere else.'),
@@ -307,7 +306,7 @@ return [
     'Report' => [
         'type' => 'object',
         'title' => 'Report payload',
-        'description' => "Shape varies by report type. Every payload carries `report` (the type) "
+        'description' => 'Shape varies by report type. Every payload carries `report` (the type) '
             ."and `meta`; the rest depends:\n\n"
             ."- `cash-flow` — `periods[]` of `{key, start, end, income, expense, net, transaction_count}` and `totals`\n"
             ."- `net-worth` — `total`, `accounts[]` of `{account_id, name, type, balance, base_balance, archived}`, `series[]` of `{key, start, end, net_worth}`\n"

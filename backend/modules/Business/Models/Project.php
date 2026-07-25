@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Business\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Project extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -77,11 +81,17 @@ final class Project extends Model
         return self::tagFor($this->id);
     }
 
+    /**
+     * @return BelongsTo<Contact, $this>
+     */
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
     }
 
+    /**
+     * @return HasMany<Invoice, $this>
+     */
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

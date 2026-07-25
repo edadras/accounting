@@ -51,14 +51,17 @@ final class DatabaseSearchEngine implements SearchEngine
     /** @return list<string> */
     private function matchingIds(string $type, string $pattern, int $limit): array
     {
-        return SearchEntry::query()
-            ->where('type', $type)
-            ->whereRaw("content LIKE ? ESCAPE '".self::LIKE_ESCAPE."'", [$pattern])
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->limit($limit)
-            ->pluck('indexable_id')
-            ->all();
+        return array_values(
+            SearchEntry::query()
+                ->where('type', $type)
+                ->whereRaw("content LIKE ? ESCAPE '".self::LIKE_ESCAPE."'", [$pattern])
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->limit($limit)
+                ->pluck('indexable_id')
+                ->map(strval(...))
+                ->all()
+        );
     }
 
     private function escapeLike(string $needle): string

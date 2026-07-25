@@ -93,11 +93,13 @@ final class ScanForAlerts implements ShouldQueue
 
         // Membership is re-checked here: a rule naming someone who has since
         // left must not keep sending them the workspace's business.
-        return User::query()
-            ->whereIn('id', $ids)
-            ->whereIn('id', $workspace->members()->select('user_id'))
-            ->get()
-            ->all();
+        return array_values(
+            User::query()
+                ->whereIn('id', $ids)
+                ->whereIn('id', $workspace->members()->select('user_id'))
+                ->get()
+                ->all()
+        );
     }
 
     /** @return iterable<Workspace> */

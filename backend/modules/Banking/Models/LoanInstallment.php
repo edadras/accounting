@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Banking\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,10 @@ use Modules\Ledger\Models\Transaction;
 final class LoanInstallment extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const STATUS_DUE = 'due';
@@ -48,11 +52,17 @@ final class LoanInstallment extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Loan, $this>
+     */
     public function loan(): BelongsTo
     {
         return $this->belongsTo(Loan::class);
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);

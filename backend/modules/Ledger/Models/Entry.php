@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Entry extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const DEBIT = 'debit';
@@ -42,11 +46,17 @@ final class Entry extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

@@ -7,6 +7,7 @@ namespace Modules\Assets\Models;
 use App\Core\Money\Currency;
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,7 +25,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Asset extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -107,11 +111,19 @@ final class Asset extends Model
         return $this->insurance_expires_at->isBefore($on ?? now());
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOfKind(Builder $query, string $kind): Builder
     {
         return $query->where('kind', $kind);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeInsuranceExpiringBefore(Builder $query, \DateTimeInterface $date): Builder
     {
         return $query->whereNotNull('insurance_expires_at')

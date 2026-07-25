@@ -52,6 +52,9 @@ final class TwoFactorChallenge extends Model
         return Str::random(64);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -79,6 +82,10 @@ final class TwoFactorChallenge extends Model
         $this->forceFill(['consumed_at' => now()])->save();
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeUsable(Builder $query): Builder
     {
         return $query->whereNull('consumed_at')

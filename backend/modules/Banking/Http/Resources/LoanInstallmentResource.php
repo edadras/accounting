@@ -23,7 +23,7 @@ final class LoanInstallmentResource extends JsonResource
             'id' => $this->id,
             'loan_id' => $this->loan_id,
             'number' => $this->number,
-            'due_date' => $this->due_date?->toDateString(),
+            'due_date' => $this->due_date->toDateString(),
             'principal_part' => MoneyView::of($this->principal_part, $currency),
             'interest_part' => MoneyView::of($this->interest_part, $currency),
             'total_amount' => MoneyView::of($this->total_amount, $currency),
@@ -39,6 +39,6 @@ final class LoanInstallmentResource extends JsonResource
     /** An instalment has no currency of its own; it is always the loan's. */
     private function currencyCode(): string
     {
-        return (string) ($this->resource->loan?->currency ?? 'USD');
+        return (string) ($this->resource->loan->currency ?? 'USD');
     }
 }

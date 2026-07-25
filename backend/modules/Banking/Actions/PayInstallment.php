@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Banking\Actions;
 
 use App\Core\Money\Money;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Modules\Banking\Exceptions\BankingException;
 use Modules\Banking\Models\Loan;
@@ -44,7 +45,10 @@ final readonly class PayInstallment
         }
 
         $penalty = max(0, (int) ($options['penalty'] ?? 0));
-        $paidAt = $options['paid_at'] ?? now();
+
+        // Normalised to the type the column is cast to, so the value written to
+        // paid_at is the same shape whether the caller passed one or not.
+        $paidAt = Carbon::instance($options['paid_at'] ?? now());
 
         return DB::transaction(function () use ($installment, $loan, $amount, $penalty, $paidAt, $options): LoanInstallment {
             if ($penalty > 0) {

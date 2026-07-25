@@ -28,22 +28,24 @@ use Modules\Ledger\Models\Transaction;
  * "is there anything left to pay?" and "record this payment" have to be one
  * indivisible step — otherwise two concurrent payments can each see the same
  * outstanding balance and together overpay it.
+ *
+ * @phpstan-type PaymentPayload array{
+ *   id?: string,
+ *   account_id: string,
+ *   amount: int,
+ *   currency?: string|null,
+ *   paid_at?: DateTimeInterface|string|null,
+ *   method?: string|null,
+ *   category_id?: string|null,
+ *   reference?: string|null,
+ * }
  */
 final readonly class RecordInvoicePayment
 {
     public function __construct(private RecordTransaction $record) {}
 
     /**
-     * @param  array{
-     *   id?: string,
-     *   account_id: string,
-     *   amount: int,
-     *   currency?: string|null,
-     *   paid_at?: DateTimeInterface|string|null,
-     *   method?: string|null,
-     *   category_id?: string|null,
-     *   reference?: string|null,
-     * }  $data
+     * @param  PaymentPayload  $data
      */
     public function handle(Invoice|string $invoice, array $data): Payment
     {
@@ -133,7 +135,16 @@ final readonly class RecordInvoicePayment
 
             $invoice->refreshPaymentStatus();
 
-            return $payment->fresh(['invoice', 'transaction', 'account']);
+            $saved = $payment->fresh(['invoice', 'transaction', 'account']);
+
+            if ($saved === null) {
+                // The payment we just wrote is gone; returning the in-memory
+                // copy would claim an invoice was settled by a row that is not
+                // there.
+                throw BusinessException::paymentNotFound($payment->id);
+            }
+
+            return $saved;
         });
     }
 

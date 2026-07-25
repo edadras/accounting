@@ -39,7 +39,7 @@ final class WorkspaceContext
 
     public function baseCurrency(): string
     {
-        return $this->workspace?->base_currency ?? 'USD';
+        return $this->workspace->base_currency ?? 'USD';
     }
 
     public function require(): Workspace

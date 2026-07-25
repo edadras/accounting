@@ -87,9 +87,8 @@ final readonly class GenerateAmortizationSchedule
             ? $this->annuityParts($loan, $currency, $count)
             : $this->simpleParts($loan, $currency, $count);
 
-        $start = $loan->start_date instanceof \DateTimeInterface
-            ? CarbonImmutable::instance($loan->start_date)
-            : CarbonImmutable::parse((string) $loan->start_date);
+        // start_date is a date-cast column, so it arrives as a Carbon already.
+        $start = CarbonImmutable::instance($loan->start_date);
 
         $rows = [];
         $balance = $loan->principal;

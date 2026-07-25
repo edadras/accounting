@@ -28,7 +28,7 @@ final class LoanResource extends JsonResource
             'interest_rate' => $this->interest_rate,
             'interest_type' => $this->interest_type,
             'installments_count' => $this->installments_count,
-            'start_date' => $this->start_date?->toDateString(),
+            'start_date' => $this->start_date->toDateString(),
             'penalty_rate' => $this->penalty_rate,
             'status' => $this->status,
             'installments' => $this->whenLoaded(

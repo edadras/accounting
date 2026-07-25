@@ -19,9 +19,13 @@ final class BuildingReportController
     public function debtors(Request $request, string $building, DebtorsReport $report): JsonResponse
     {
         $model = Building::query()->findOrFail($building);
-        $period = $request->query('period');
 
-        $rows = $report->handle($model, $period === null ? null : (string) $period);
+        // ?period=… is a YYYY-MM string; anything else (an array, an empty
+        // value) means "every outstanding month".
+        $queried = $request->query('period');
+        $period = is_string($queried) && $queried !== '' ? $queried : null;
+
+        $rows = $report->handle($model, $period);
 
         return response()->json([
             'data' => $rows->map(fn (array $row) => [
@@ -36,7 +40,7 @@ final class BuildingReportController
             'meta' => [
                 'period' => $period,
                 'debtor_count' => $rows->count(),
-                'totals' => $report->totals($model, $period === null ? null : (string) $period)
+                'totals' => $report->totals($model, $period)
                     ->map(fn (Money $total) => $this->presentMoney($total))
                     ->all(),
             ],

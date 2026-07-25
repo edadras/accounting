@@ -36,6 +36,9 @@ final class BudgetUsage extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Budget, $this>
+     */
     public function budget(): BelongsTo
     {
         return $this->belongsTo(Budget::class);

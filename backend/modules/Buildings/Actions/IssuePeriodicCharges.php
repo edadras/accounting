@@ -102,12 +102,15 @@ final readonly class IssuePeriodicCharges
      */
     private function weightsFor(Building $building, Collection $units): array
     {
-        return $units->map(fn (BuildingUnit $unit): int => match ($building->charge_formula) {
+        return array_values($units->map(fn (BuildingUnit $unit): int => match ($building->charge_formula) {
             Building::FORMULA_FIXED => 1,
             Building::FORMULA_PER_AREA => $unit->areaWeight(),
             Building::FORMULA_PER_RESIDENT => $unit->residents_count,
             Building::FORMULA_MIXED => $unit->shareWeight(),
-        })->values()->all();
+            // A formula nobody weights by would otherwise raise an
+            // UnhandledMatchError halfway through issuing a building's charges.
+            default => throw BuildingsException::unknownChargeFormula($building->charge_formula),
+        })->all());
     }
 
     private function assertFundCurrencyMatches(Building $building, Currency $currency): void

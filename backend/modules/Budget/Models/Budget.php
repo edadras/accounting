@@ -62,6 +62,9 @@ final class Budget extends Model
         ];
     }
 
+    /**
+     * @return HasMany<BudgetUsage, $this>
+     */
     public function usages(): HasMany
     {
         return $this->hasMany(BudgetUsage::class);

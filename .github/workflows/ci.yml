@@ -30,7 +30,11 @@ jobs:
         with:
           php-version: "8.4"
           extensions: mbstring, intl, pdo_sqlite, sqlite3, redis, zip, bcmath
-          coverage: none
+          # PCOV rather than Xdebug: the suite runs several times faster under
+          # it, and nothing here needs a step debugger. Without a driver
+          # PHPUnit emits a warning and still exits 0, so the coverage step
+          # below would silently report nothing.
+          coverage: pcov
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
@@ -49,14 +53,39 @@ jobs:
           php artisan migrate:rollback --step=40 --force
           php artisan migrate --force
 
-      - name: Tests
-        run: ./vendor/bin/phpunit
+      - name: Tests with coverage
+        # Targets per area are recorded in backend/phpunit.xml; they are read
+        # from this report rather than enforced as one repo-wide threshold,
+        # which would let a well-covered module pay for a bare one.
+        # Report destinations come from phpunit.xml; --coverage-text only adds
+        # the summary to the job log.
+        run: ./vendor/bin/phpunit --coverage-text
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/storage/coverage/
+          if-no-files-found: warn
 
       - name: Formatting
         run: ./vendor/bin/pint --test
 
+      # docs/10-quality-and-dod.md §5 step 2. Invoked directly rather than
+      # through `composer analyse` so a missing binary fails here with an
+      # obvious message instead of being reported as a composer script error.
+      - name: Static analysis (PHPStan level 8)
+        run: ./vendor/bin/phpstan analyse --no-progress
+
       - name: Dependency advisories
         run: composer audit --no-interaction
+
+      # docs/10-quality-and-dod.md §5 step 7. Lives in the backend job because
+      # PHP is already set up here; the file it reads belongs to the client, so
+      # the path reaches up out of the working directory.
+      - name: Translation key parity (fa/en/tr/ar)
+        run: php scripts/check-translation-keys.php
 
   app:
     name: Flutter client

@@ -26,8 +26,10 @@ use Modules\Ledger\Models\Category;
 final class MonthlySummary extends Model
 {
     use BelongsToWorkspace;
+
     /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const CREATED_AT = null;

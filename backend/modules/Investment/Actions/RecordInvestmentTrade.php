@@ -99,7 +99,9 @@ final readonly class RecordInvestmentTrade
         $outcome = $this->apply($action, $investment, $quantity, $price, $fee);
 
         $baseCurrency = Currency::of($workspace->base_currency);
-        $rate = isset($data['fx_rate']) && $data['fx_rate'] !== null
+        // isset() is already false for a null fx_rate, so this covers both the
+        // absent key and an explicit null.
+        $rate = isset($data['fx_rate'])
             ? (string) $data['fx_rate']
             : $this->rates->rate($currency, $baseCurrency);
         $baseAmount = Money::of($outcome['net'], $currency)->convertTo($baseCurrency, $rate);
@@ -141,7 +143,15 @@ final readonly class RecordInvestmentTrade
 
             $row->save();
 
-            return $row->fresh(['investment']);
+            $saved = $row->fresh(['investment']);
+
+            if ($saved === null) {
+                // The trade we just wrote is gone; the in-memory copy would
+                // report a position the holding no longer reflects.
+                throw InvestmentException::transactionNotFound($row->id);
+            }
+
+            return $saved;
         });
     }
 

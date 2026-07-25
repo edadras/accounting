@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Buildings\Models;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,7 +21,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class BuildingUnit extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     protected $fillable = [
@@ -51,11 +55,17 @@ final class BuildingUnit extends Model
         self::deleted($sync);
     }
 
+    /**
+     * @return BelongsTo<Building, $this>
+     */
     public function building(): BelongsTo
     {
         return $this->belongsTo(Building::class, 'building_id');
     }
 
+    /**
+     * @return HasMany<BuildingCharge, $this>
+     */
     public function charges(): HasMany
     {
         return $this->hasMany(BuildingCharge::class, 'unit_id');

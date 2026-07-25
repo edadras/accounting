@@ -18,7 +18,7 @@ final class SplitExpenseResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
-        $baseCurrency = $this->trip->base_currency;
+        $baseCurrency = $this->requireTrip()->base_currency;
 
         return [
             'id' => $this->id,
@@ -31,7 +31,7 @@ final class SplitExpenseResource extends JsonResource
             ],
 
             'category_id' => $this->category_id,
-            'occurred_at' => $this->occurred_at?->toIso8601String(),
+            'occurred_at' => $this->occurred_at->toIso8601String(),
             'description' => $this->description,
             'latitude' => $this->latitude === null ? null : (float) $this->latitude,
             'longitude' => $this->longitude === null ? null : (float) $this->longitude,

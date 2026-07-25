@@ -54,7 +54,7 @@ final readonly class CreateWorkspace
             $this->context->runFor($workspace, fn () => app(AuditRecorder::class)
                 ->withoutRecording(fn () => $this->seeder->seed($workspace)));
 
-            return $workspace->fresh();
+            return $workspace->refresh();
         });
     }
 }

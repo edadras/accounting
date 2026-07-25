@@ -18,6 +18,7 @@ use RuntimeException;
  */
 final class TravelException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,
@@ -30,6 +31,11 @@ final class TravelException extends RuntimeException
     public static function tripNotFound(string $id): self
     {
         return new self('trip_not_found', "Trip [{$id}] does not exist in this workspace.", 404);
+    }
+
+    public static function expenseNotFound(string $id): self
+    {
+        return new self('split_expense_not_found', "Split expense [{$id}] does not exist in this workspace.", 404);
     }
 
     public static function memberNotInTrip(string $id): self

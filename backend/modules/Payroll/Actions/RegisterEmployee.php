@@ -51,7 +51,7 @@ final readonly class RegisterEmployee
         }
 
         $startedOn = CarbonImmutable::parse($data['started_on'])->startOfDay();
-        $endedOn = isset($data['ended_on']) && $data['ended_on'] !== null
+        $endedOn = isset($data['ended_on'])
             ? CarbonImmutable::parse($data['ended_on'])->startOfDay()
             : null;
 

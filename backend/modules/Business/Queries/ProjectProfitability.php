@@ -70,11 +70,13 @@ final readonly class ProjectProfitability
     /** @return list<array<string, mixed>> */
     public function forAll(): array
     {
-        return Project::query()
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Project $project) => $this->forProject($project))
-            ->all();
+        return array_values(
+            Project::query()
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Project $project) => $this->forProject($project))
+                ->all()
+        );
     }
 
     /** @return array{0: Money, 1: Money} */

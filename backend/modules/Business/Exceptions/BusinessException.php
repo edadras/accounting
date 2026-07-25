@@ -16,6 +16,7 @@ use RuntimeException;
  */
 final class BusinessException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,
@@ -38,6 +39,11 @@ final class BusinessException extends RuntimeException
     public static function invoiceNotFound(string $id): self
     {
         return new self('invoice_not_found', "Invoice [{$id}] does not exist in this workspace.", 404);
+    }
+
+    public static function paymentNotFound(string $id): self
+    {
+        return new self('payment_not_found', "Payment [{$id}] does not exist in this workspace.", 404);
     }
 
     public static function unknownInvoiceDirection(string $direction): self

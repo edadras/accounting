@@ -16,6 +16,9 @@ use Modules\Documents\Models\Documentable;
  */
 trait HasDocuments
 {
+    /**
+     * @return MorphToMany<Document, $this>
+     */
     public function documents(): MorphToMany
     {
         return $this->morphToMany(Document::class, 'documentable')

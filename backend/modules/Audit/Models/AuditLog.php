@@ -52,24 +52,36 @@ final class AuditLog extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<Workspace, $this>
+     */
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** @param  Builder<self>  $query */
-    public function scopeForWorkspace($query, string $workspaceId)
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeForWorkspace(Builder $query, string $workspaceId): Builder
     {
         return $query->where('workspace_id', $workspaceId);
     }
 
-    /** @param  Builder<self>  $query */
-    public function scopeForUser($query, int|string $userId)
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeForUser(Builder $query, int|string $userId): Builder
     {
         return $query->where('user_id', $userId);
     }

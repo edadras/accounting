@@ -91,13 +91,10 @@ final class CalculateDepreciation
     public function bookValueOn(Asset $asset, ?\DateTimeInterface $on = null): Money
     {
         $on = $on ?? now();
-        $purchased = $asset->purchase_date;
 
-        if ($purchased === null) {
-            return $asset->purchasePrice();
-        }
-
-        $years = max(0, (int) $purchased->diffInYears($on, absolute: false));
+        // purchase_date is NOT NULL on the table and required by the API, so
+        // there is no "asset without a purchase date" case to fall back to.
+        $years = max(0, (int) $asset->purchase_date->diffInYears($on, absolute: false));
 
         return $this->bookValueAfter($asset, $years);
     }

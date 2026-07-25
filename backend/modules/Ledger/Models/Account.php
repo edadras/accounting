@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,7 +24,10 @@ final class Account extends Model
     use Auditable;
     use BelongsToWorkspace;
     use HasDocuments;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -47,11 +51,17 @@ final class Account extends Model
         ];
     }
 
+    /**
+     * @return HasMany<Entry, $this>
+     */
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class);
     }
 
+    /**
+     * @return HasMany<Transaction, $this>
+     */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

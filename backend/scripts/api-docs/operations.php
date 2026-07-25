@@ -13,7 +13,6 @@ declare(strict_types=1);
  * ResolveWorkspace are in the stack — is deliberately NOT repeated here. Only
  * payload facts live in this file.
  */
-
 $R = fn (string $name): array => ['$ref' => '#/components/schemas/'.$name];
 
 /** `{ "data": X }` */
@@ -179,7 +178,7 @@ return [
         'id' => 'createTransaction', 'tag' => 'Ledger',
         'summary' => 'Record a transaction',
         'description' => "Posts balanced double-entry rows inside one database transaction.\n\n"
-            ."`amount` is always POSITIVE — direction is carried by `type`, not by the sign. A "
+            .'`amount` is always POSITIVE — direction is carried by `type`, not by the sign. A '
             ."negative amount is refused (`negative_amount`), as is zero (`zero_amount`).\n\n"
             .'This endpoint honours `Idempotency-Key`; the header takes precedence over the '
             .'`idempotency_key` body field, because the header is what a retry layer actually sets.',
@@ -298,8 +297,8 @@ return [
         'id' => 'exportReport', 'tag' => 'Reports',
         'summary' => 'Export a report',
         'description' => "Answers one of two ways, and a client must handle both:\n\n"
-            ."- **202** with a `ReportExport` record, when the export was queued — either because "
-            ."`queued: true` was sent or because the result is larger than the inline row limit "
+            .'- **202** with a `ReportExport` record, when the export was queued — either because '
+            .'`queued: true` was sent or because the result is larger than the inline row limit '
             ."for the format. Poll `GET /reports/exports/{id}` and use its `download_url`.\n"
             ."- **200** with the file bytes, when it was small enough to build inline.\n\n"
             .'Pass `queued: true` if you want an id you can poll and a link you can hand to a user; '
@@ -1191,11 +1190,11 @@ return [
         'body' => $body(['payload' => $str('Raw scanned payload.', ['maxLength' => 4000])], ['payload']),
         'responses' => [201 => $res('Captured.', $data($R('CaptureMessage')))]],
     'POST /api/v1/capture/email' => ['id' => 'captureEmailWebhook', 'tag' => 'Capture', 'summary' => 'Inbound email webhook',
-        'description' => "Called by the mail provider, not by a client — it uses a shared secret rather "
-            ."than a Sanctum token, and takes no `X-Workspace-Id`; the workspace is resolved from the "
+        'description' => 'Called by the mail provider, not by a client — it uses a shared secret rather '
+            .'than a Sanctum token, and takes no `X-Workspace-Id`; the workspace is resolved from the '
             ."recipient ingest alias.\n\n"
             ."Authenticate with EITHER:\n"
-            ."- `X-Capture-Signature: sha256=<hmac>` — HMAC-SHA256 of the RAW request body, keyed with "
+            .'- `X-Capture-Signature: sha256=<hmac>` — HMAC-SHA256 of the RAW request body, keyed with '
             ."the shared secret. Preferred; checked first when present.\n"
             ."- `X-Capture-Secret: <secret>` — the plain shared secret.\n\n"
             .'If no secret is configured the endpoint fails closed with `503 '
@@ -1343,8 +1342,8 @@ return [
         ], ['name', 'email', 'password']),
         'responses' => [201 => $res('Registered.', $data($R('AuthSuccess')))]],
     'POST /api/v1/auth/login' => ['id' => 'login', 'tag' => 'Core', 'summary' => 'Sign in',
-        'description' => "**Two different 200 bodies.** With two-factor confirmed, this returns a "
-            ."CHALLENGE and no token — exchange it at `POST /auth/2fa/verify`. Without, it returns the "
+        'description' => '**Two different 200 bodies.** With two-factor confirmed, this returns a '
+            .'CHALLENGE and no token — exchange it at `POST /auth/2fa/verify`. Without, it returns the '
             ."token and the user's workspaces. Check for `two_factor_required` before reading `token`.",
         'headers' => ['X-Device-Name' => ['schema' => ['type' => 'string', 'maxLength' => 120], 'description' => 'Names the issued token, so a user can tell their devices apart when revoking one.']],
         'body' => $body([
@@ -1490,10 +1489,10 @@ return [
     // =========================================================== Sync
 
     'POST /api/v1/sync/push' => ['id' => 'syncPush', 'tag' => 'Sync', 'summary' => 'Push local changes',
-        'description' => "Uploads a batch of offline changes and answers with one verdict per change, in "
+        'description' => 'Uploads a batch of offline changes and answers with one verdict per change, in '
             ."order.\n\n"
-            ."The rule this endpoint exists to enforce: **a disagreement about an amount, currency, "
-            ."account or date is never auto-resolved.** It comes back as `status: \"conflict\"` with the "
+            .'The rule this endpoint exists to enforce: **a disagreement about an amount, currency, '
+            .'account or date is never auto-resolved.** It comes back as `status: "conflict"` with the '
             ."server's version in `server_payload`, for a person to settle. Non-financial fields merge "
             ."last-write-wins.\n\n"
             .'`base_version` is the `version` the client last saw. A stale one is what makes a conflict '

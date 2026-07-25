@@ -198,7 +198,9 @@ final readonly class Money implements JsonSerializable
             $slices[$order[$i % count($order)]] += $step;
         }
 
-        return array_map(fn (int $units) => new self($units, $this->currency), $slices);
+        // array_values: the remainder loop writes back through $order, which
+        // PHPStan cannot see keeps the keys 0..n-1 intact.
+        return array_values(array_map(fn (int $units) => new self($units, $this->currency), $slices));
     }
 
     /** @param  iterable<self>  $amounts */

@@ -6,6 +6,7 @@ namespace Modules\Buildings\Models;
 
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,10 @@ use Modules\Ledger\Models\Transaction;
 final class BuildingCharge extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const STATUS_UNPAID = 'unpaid';
@@ -47,16 +51,25 @@ final class BuildingCharge extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Building, $this>
+     */
     public function building(): BelongsTo
     {
         return $this->belongsTo(Building::class, 'building_id');
     }
 
+    /**
+     * @return BelongsTo<BuildingUnit, $this>
+     */
     public function unit(): BelongsTo
     {
         return $this->belongsTo(BuildingUnit::class, 'unit_id');
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
@@ -82,11 +95,19 @@ final class BuildingCharge extends Model
         return $this->paid_amount >= $this->amount;
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOutstanding(Builder $query): Builder
     {
         return $query->whereIn('status', self::OUTSTANDING_STATUSES);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeForPeriod(Builder $query, string $period): Builder
     {
         return $query->where('period', $period);

@@ -30,8 +30,7 @@ final class StaticProvider implements PriceProvider, RateProvider
 
     public function rates(string $base, array $quotes): array
     {
-        $seed = ExchangeRateResolver::FALLBACK_TO_USD;
-        $baseUsd = $seed[strtoupper(trim($base))] ?? null;
+        $baseUsd = ExchangeRateResolver::fallbackToUsd(strtoupper(trim($base)));
 
         if ($baseUsd === null) {
             return [];
@@ -41,7 +40,7 @@ final class StaticProvider implements PriceProvider, RateProvider
 
         foreach ($quotes as $quote) {
             $code = strtoupper(trim((string) $quote));
-            $quoteUsd = $seed[$code] ?? null;
+            $quoteUsd = ExchangeRateResolver::fallbackToUsd($code);
 
             if ($quoteUsd === null || $quoteUsd == 0.0) {
                 continue;
@@ -57,20 +56,20 @@ final class StaticProvider implements PriceProvider, RateProvider
 
     public function prices(array $symbols): array
     {
-        $seed = ExchangeRateResolver::FALLBACK_TO_USD;
         $quotes = [];
 
         foreach ($symbols as $symbol) {
             $code = strtoupper(trim((string) $symbol));
+            $usd = ExchangeRateResolver::fallbackToUsd($code);
 
             // The seed table only knows things that are also currencies —
             // metals, crypto, cash. A listed share has no static price and is
             // left alone rather than given an invented one.
-            if (! isset($seed[$code])) {
+            if ($usd === null) {
                 continue;
             }
 
-            $quotes[$code] = new PriceQuote($code, (string) $seed[$code], Currency::of('USD')->code);
+            $quotes[$code] = new PriceQuote($code, (string) $usd, Currency::of('USD')->code);
         }
 
         return $quotes;

@@ -45,20 +45,22 @@ final readonly class SettleTrip
             ->where('trip_id', $trip->id)
             ->selectRaw('payer_member_id, SUM(base_amount) AS total')
             ->groupBy('payer_member_id')
-            ->get();
+            ->pluck('total', 'payer_member_id');
 
-        foreach ($paid as $row) {
-            $balances[$row->payer_member_id] = ($balances[$row->payer_member_id] ?? 0) + (int) $row->total;
+        foreach ($paid as $memberId => $total) {
+            $memberId = (string) $memberId;
+            $balances[$memberId] = ($balances[$memberId] ?? 0) + (int) $total;
         }
 
         $owed = SplitShare::query()
             ->whereIn('split_expense_id', $expenseIds)
             ->selectRaw('member_id, SUM(base_share_amount) AS total')
             ->groupBy('member_id')
-            ->get();
+            ->pluck('total', 'member_id');
 
-        foreach ($owed as $row) {
-            $balances[$row->member_id] = ($balances[$row->member_id] ?? 0) - (int) $row->total;
+        foreach ($owed as $memberId => $total) {
+            $memberId = (string) $memberId;
+            $balances[$memberId] = ($balances[$memberId] ?? 0) - (int) $total;
         }
 
         // A settlement already paid moves the two members towards zero, so a
@@ -167,10 +169,13 @@ final readonly class SettleTrip
     /** @return list<string> */
     private function memberIds(Trip $trip): array
     {
-        return $trip->members()
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->pluck('id')
-            ->all();
+        return array_values(
+            $trip->members()
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->pluck('id')
+                ->map(strval(...))
+                ->all()
+        );
     }
 }

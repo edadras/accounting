@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Payroll\Actions;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Payroll\Exceptions\PayrollException;
 use Modules\Payroll\Models\PayrollRun;
@@ -44,7 +45,7 @@ final readonly class ApprovePayrollRun
             $run->recalculateTotals();
 
             $run->status = PayrollRun::STATUS_APPROVED;
-            $run->approved_at = now();
+            $run->approved_at = CarbonImmutable::now();
             $run->approved_by = $approver?->id;
             $run->save();
 

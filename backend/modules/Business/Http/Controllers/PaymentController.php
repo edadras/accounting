@@ -12,6 +12,9 @@ use Modules\Business\Http\Resources\PaymentResource;
 use Modules\Business\Models\Invoice;
 use Modules\Business\Models\Payment;
 
+/**
+ * @phpstan-import-type PaymentPayload from RecordInvoicePayment
+ */
 final class PaymentController
 {
     public function index(Request $request): JsonResponse
@@ -55,13 +58,16 @@ final class PaymentController
 
     public function store(StorePaymentRequest $request, RecordInvoicePayment $record): JsonResponse
     {
+        /** @var PaymentPayload $data */
         $data = $request->validated();
+
+        $invoiceId = $request->string('invoice_id')->toString();
 
         // findOrFail, not the action's own lookup: a foreign invoice id must
         // answer 404 through the workspace scope before anything is recorded.
-        Invoice::query()->findOrFail($data['invoice_id']);
+        Invoice::query()->findOrFail($invoiceId);
 
-        $payment = $record->handle($data['invoice_id'], $data);
+        $payment = $record->handle($invoiceId, $data);
 
         return (new PaymentResource($payment))
             ->response()

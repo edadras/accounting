@@ -49,7 +49,7 @@ use Modules\Payroll\Support\PayPeriod;
  * @property string|null $net_transaction_id
  * @property string|null $liability_transaction_id
  * @property CarbonImmutable|null $approved_at
- * @property string|null $approved_by
+ * @property int|null $approved_by
  * @property CarbonImmutable|null $paid_at
  * @property string|null $notes
  * @property int $version
@@ -102,13 +102,13 @@ final class PayrollRun extends Model
      */
     public static function booted(): void
     {
-        static::updating(function (self $run): void {
+        self::updating(function (self $run): void {
             if ($run->getOriginal('status') === self::STATUS_PAID) {
                 throw PayrollException::runIsPaid((string) $run->getOriginal('reference'));
             }
         });
 
-        static::deleting(function (self $run): void {
+        self::deleting(function (self $run): void {
             if ($run->getOriginal('status') === self::STATUS_PAID) {
                 throw PayrollException::runIsPaid((string) $run->getOriginal('reference'));
             }

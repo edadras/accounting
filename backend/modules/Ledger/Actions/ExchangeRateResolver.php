@@ -23,6 +23,8 @@ final class ExchangeRateResolver
      * Public because MarketData's StaticProvider is the other reader: with no
      * feed configured it fetches these same numbers, so installing the module
      * cannot move a balance. One table, one set of values, no drift.
+     *
+     * @var array<string, float>
      */
     public const FALLBACK_TO_USD = [
         'USD' => 1.0,
@@ -36,6 +38,18 @@ final class ExchangeRateResolver
         'ETH' => 3200.0,
         'XAU' => 2350.0,
     ];
+
+    /**
+     * The seeded USD price of one unit of $code, or null when it is not seeded.
+     *
+     * Readers go through this rather than indexing the constant directly, so
+     * they see a plain float and their divide-by-zero guards keep meaning
+     * something: a bad seed has to be caught, not assumed away.
+     */
+    public static function fallbackToUsd(string $code): ?float
+    {
+        return self::FALLBACK_TO_USD[$code] ?? null;
+    }
 
     /** @var array<string, string> */
     private array $memo = [];
@@ -79,8 +93,8 @@ final class ExchangeRateResolver
             return (string) (1 / (float) $inverse);
         }
 
-        $fromUsd = self::FALLBACK_TO_USD[$from->code] ?? null;
-        $toUsd = self::FALLBACK_TO_USD[$to->code] ?? null;
+        $fromUsd = self::fallbackToUsd($from->code);
+        $toUsd = self::fallbackToUsd($to->code);
 
         if ($fromUsd === null || $toUsd === null || $toUsd == 0.0) {
             throw new \RuntimeException(

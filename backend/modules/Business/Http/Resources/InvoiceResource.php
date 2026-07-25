@@ -32,7 +32,7 @@ final class InvoiceResource extends JsonResource
             'contact_id' => $this->contact_id,
             'project_id' => $this->project_id,
 
-            'issue_date' => $this->issue_date?->toDateString(),
+            'issue_date' => $this->issue_date->toDateString(),
             'due_date' => $this->due_date?->toDateString(),
 
             'subtotal' => $this->presentAmount((int) $this->subtotal, $currency),

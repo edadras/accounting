@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Capture;
 
+use Illuminate\Http\Response;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Modules\AI\Models\AiDraft;
@@ -142,7 +143,7 @@ final class QrCaptureTest extends CaptureTestCase
     }
 
     /**
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @return TestResponse<Response>
      */
     private function scan(Workspace $workspace, string $payload): TestResponse
     {

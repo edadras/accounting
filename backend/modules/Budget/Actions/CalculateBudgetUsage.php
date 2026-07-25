@@ -6,8 +6,8 @@ namespace Modules\Budget\Actions;
 
 use App\Core\Money\Currency;
 use App\Core\Money\Money;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Modules\Budget\Models\Budget;
 use Modules\Budget\Models\BudgetUsage;
 use Modules\Buildings\Models\BuildingExpense;
@@ -61,7 +61,7 @@ final readonly class CalculateBudgetUsage
 
         // Stamped unconditionally: the row records when the figure was last
         // proven against the ledger, not only when the figure happened to move.
-        $usage->updated_at = CarbonImmutable::now();
+        $usage->updated_at = Carbon::now();
         $usage->save();
 
         return $usage;
@@ -96,7 +96,11 @@ final readonly class CalculateBudgetUsage
         return Money::of((int) $query->sum('base_amount'), $baseCurrency);
     }
 
-    /** False when the scope can match nothing, so the caller can skip the query. */
+    /**
+     * False when the scope can match nothing, so the caller can skip the query.
+     *
+     * @param  Builder<Transaction>  $query
+     */
     private function constrainToScope(Builder $query, Budget $budget): bool
     {
         if ($budget->scope === Budget::SCOPE_OVERALL) {
@@ -139,6 +143,7 @@ final readonly class CalculateBudgetUsage
         };
     }
 
+    /** @param  Builder<Transaction>  $query */
     private function tagged(Builder $query, string $tag): bool
     {
         $query->whereJsonContains('tags', $tag);
@@ -146,6 +151,7 @@ final readonly class CalculateBudgetUsage
         return true;
     }
 
+    /** @param  Builder<Transaction>  $query */
     private function buildingExpenses(Builder $query, string $buildingId): bool
     {
         $query->whereIn('id', BuildingExpense::query()

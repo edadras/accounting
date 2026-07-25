@@ -6,6 +6,7 @@ namespace Tests\Feature\Search;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Modules\Core\Models\Workspace;
@@ -335,7 +336,7 @@ final class SearchTest extends LedgerTestCase
 
     /**
      * @param  array<string, string|int>  $extra
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @return TestResponse<Response>
      */
     private function search(Workspace $workspace, string $query, array $extra = []): TestResponse
     {

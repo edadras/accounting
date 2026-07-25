@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Investment\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,10 @@ use Modules\Ledger\Models\Transaction;
 final class InvestmentTransaction extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const BUY = 'buy';
@@ -57,12 +61,19 @@ final class InvestmentTransaction extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Investment, $this>
+     */
     public function investment(): BelongsTo
     {
         return $this->belongsTo(Investment::class);
     }
 
-    /** The ledger transaction that moved the cash, when there was one. */
+    /**
+     * The ledger transaction that moved the cash, when there was one.
+     *
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);

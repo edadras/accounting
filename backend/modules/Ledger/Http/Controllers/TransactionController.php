@@ -12,6 +12,9 @@ use Modules\Ledger\Http\Resources\TransactionResource;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\Transaction;
 
+/**
+ * @phpstan-import-type TransactionPayload from RecordTransaction
+ */
 final class TransactionController
 {
     public function index(Request $request): JsonResponse
@@ -29,7 +32,9 @@ final class TransactionController
             $query->where('account_id', $accountId);
         }
 
-        if ($categoryId = $request->query('category_id')) {
+        $categoryId = $request->query('category_id');
+
+        if (is_string($categoryId) && $categoryId !== '') {
             // Filtering by "Food" must include Restaurant and Groceries too —
             // otherwise every parent category reads as empty.
             $category = Category::query()->find($categoryId);
@@ -71,6 +76,7 @@ final class TransactionController
 
     public function store(StoreTransactionRequest $request, RecordTransaction $record): JsonResponse
     {
+        /** @var TransactionPayload $payload */
         $payload = $request->validated();
 
         // The Idempotency-Key header wins over a body field: it is what the

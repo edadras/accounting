@@ -130,7 +130,7 @@ final class RecurringRuleController
             'interval' => $rule->interval,
             'day_of_month' => $rule->day_of_month,
             'day_of_week' => $rule->day_of_week,
-            'starts_at' => $rule->starts_at?->toIso8601String(),
+            'starts_at' => $rule->starts_at->toIso8601String(),
             'ends_at' => $rule->ends_at?->toIso8601String(),
             'next_run_at' => $rule->next_run_at?->toIso8601String(),
             'last_run_at' => $rule->last_run_at?->toIso8601String(),

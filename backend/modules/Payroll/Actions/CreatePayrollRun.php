@@ -16,7 +16,6 @@ use Modules\Payroll\Models\PayrollRun;
 use Modules\Payroll\Models\Payslip;
 use Modules\Payroll\Support\PayPeriod;
 use Modules\Payroll\Support\PayslipDraft;
-use Modules\Payroll\Support\PayslipLineDraft;
 
 /**
  * Opens a payroll run as a draft, with a payslip for everyone employed in the
@@ -94,7 +93,7 @@ final readonly class CreatePayrollRun
                 'reference' => $this->reference($data['reference'] ?? null, $period),
                 'period_start' => $period->start,
                 'period_end' => $period->end,
-                'pay_date' => isset($data['pay_date']) && $data['pay_date'] !== null
+                'pay_date' => isset($data['pay_date'])
                     ? CarbonImmutable::parse($data['pay_date'])->startOfDay()
                     : $period->end,
                 'currency' => $currency->code,

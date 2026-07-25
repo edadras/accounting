@@ -19,7 +19,6 @@ declare(strict_types=1);
  * Usage:  php backend/scripts/check-translation-keys.php [path-to-translations.dart]
  * Exit:   0 all locales agree, 1 mismatch or unparseable input.
  */
-
 const LOCALES = ['fa', 'en', 'tr', 'ar'];
 
 $path = $argv[1] ?? dirname(__DIR__, 2).'/app/lib/core/i18n/translations.dart';
@@ -95,7 +94,7 @@ foreach (LOCALES as $code) {
     if ($missing !== []) {
         $failed = true;
         sort($missing);
-        fwrite(STDERR, '[' .$code.'] missing '.count($missing).' key(s):'."\n");
+        fwrite(STDERR, '['.$code.'] missing '.count($missing).' key(s):'."\n");
 
         foreach ($missing as $key) {
             $present = implode(', ', array_values(array_filter(

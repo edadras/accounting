@@ -21,7 +21,7 @@ final class CheckController
         $checks = Check::query()
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('direction'), fn ($q) => $q->where('direction', $request->string('direction')))
-            ->when($request->filled('due_before'), fn ($q) => $q->whereDate('due_date', '<=', $request->string('due_before')))
+            ->when($request->filled('due_before'), fn ($q) => $q->whereDate('due_date', '<=', $request->string('due_before')->toString()))
             ->orderBy('due_date')
             ->get();
 

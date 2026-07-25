@@ -28,6 +28,10 @@ final class ExchangeRate extends Model
         ];
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeForPair(Builder $query, string $base, string $quote): Builder
     {
         return $query->where('base_code', $base)->where('quote_code', $quote);

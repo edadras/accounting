@@ -16,6 +16,7 @@ use RuntimeException;
  */
 final class InvestmentException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,
@@ -28,6 +29,11 @@ final class InvestmentException extends RuntimeException
     public static function investmentNotFound(string $id): self
     {
         return new self('investment_not_found', "Investment [{$id}] does not exist in this workspace.", 404);
+    }
+
+    public static function transactionNotFound(string $id): self
+    {
+        return new self('investment_transaction_not_found', "Investment transaction [{$id}] does not exist in this workspace.", 404);
     }
 
     public static function unknownAction(string $action): self

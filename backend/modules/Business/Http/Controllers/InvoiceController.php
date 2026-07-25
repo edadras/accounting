@@ -16,6 +16,10 @@ use Modules\Business\Http\Resources\PaymentResource;
 use Modules\Business\Models\Invoice;
 use Modules\Core\Models\WorkspaceMember;
 
+/**
+ * @phpstan-import-type InvoicePayload from CreateInvoice
+ * @phpstan-import-type PaymentPayload from RecordInvoicePayment
+ */
 final class InvoiceController
 {
     public function index(Request $request): JsonResponse
@@ -68,7 +72,10 @@ final class InvoiceController
 
     public function store(StoreInvoiceRequest $request, CreateInvoice $create): JsonResponse
     {
-        $invoice = $create->handle($request->validated());
+        /** @var InvoicePayload $payload */
+        $payload = $request->validated();
+
+        $invoice = $create->handle($payload);
 
         return (new InvoiceResource($invoice->load(['items', 'contact', 'project'])))
             ->response()
@@ -103,11 +110,19 @@ final class InvoiceController
     {
         Invoice::query()->findOrFail($id);
 
-        $payment = $record->handle($id, $request->validated());
+        /** @var PaymentPayload $payload */
+        $payload = $request->validated();
+
+        $payment = $record->handle($id, $payload);
+
+        // Re-read the invoice instead of reaching through the payment: the
+        // payment has just moved its status, and that is what the client needs
+        // back in the same response.
+        $invoice = Invoice::query()->with('items')->findOrFail($id);
 
         return (new PaymentResource($payment))
             ->additional(['meta' => [
-                'invoice' => new InvoiceResource($payment->invoice->fresh(['items'])),
+                'invoice' => new InvoiceResource($invoice),
             ]])
             ->response()
             ->setStatusCode(201);

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Business\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Business\Exceptions\BusinessException;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
 
@@ -22,7 +24,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class InvoiceItem extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     protected $fillable = [
@@ -43,6 +48,9 @@ final class InvoiceItem extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Invoice, $this>
+     */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
@@ -50,6 +58,14 @@ final class InvoiceItem extends Model
 
     public function money(): Money
     {
-        return Money::of((int) $this->line_total, $this->invoice->currency);
+        $invoice = $this->invoice;
+
+        if ($invoice === null) {
+            // A line carries no currency of its own, so an orphaned row cannot
+            // be valued at all — better to say so than to invent a currency.
+            throw BusinessException::invoiceNotFound((string) $this->invoice_id);
+        }
+
+        return Money::of((int) $this->line_total, $invoice->currency);
     }
 }

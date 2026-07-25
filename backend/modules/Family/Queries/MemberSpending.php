@@ -55,12 +55,14 @@ final readonly class MemberSpending
     /** @return list<array<string, mixed>> */
     public function forPeriod(Period $period): array
     {
-        return FamilyMember::query()
-            ->orderBy('display_name')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (FamilyMember $member): array => $this->forMember($member, $period))
-            ->all();
+        return array_values(
+            FamilyMember::query()
+                ->orderBy('display_name')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (FamilyMember $member): array => $this->forMember($member, $period))
+                ->all()
+        );
     }
 
     private function spent(FamilyMember $member, Period $period, Currency $base): Money

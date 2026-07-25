@@ -50,6 +50,10 @@ final class AlertRule extends Model
         ];
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -58,7 +62,7 @@ final class AlertRule extends Model
     /** @return list<string> */
     public function channelKeys(): array
     {
-        $channels = is_array($this->channels) ? $this->channels : [];
+        $channels = array_map(strval(...), array_values($this->channels));
 
         // The database channel is not optional: it is the alert row itself, and
         // without it an alert would exist that the user can never see in-app.

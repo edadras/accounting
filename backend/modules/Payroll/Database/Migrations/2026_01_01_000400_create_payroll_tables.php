@@ -127,7 +127,12 @@ return new class extends Migration
             $table->foreignUlid('liability_transaction_id')->nullable()->constrained('transactions')->nullOnDelete();
 
             $table->timestamp('approved_at')->nullable();
-            $table->foreignUlid('approved_by')->nullable()->constrained('users')->nullOnDelete();
+
+            // users.id is a bigint, so this has to be a foreignId. Declaring it
+            // as a ULID made a char(26) column point at an integer key: on
+            // MySQL or Postgres the constraint cannot even be created, and the
+            // approver's id would be stored in a column it does not fit.
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('paid_at')->nullable();
 
             $table->text('notes')->nullable();

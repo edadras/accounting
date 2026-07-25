@@ -8,10 +8,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Alerts\Models\AlertPreference;
 use Modules\Alerts\Models\ChannelKeys;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\Core\Support\WorkspaceContext;
 
 final class AlertPreferenceController
 {
+    use ResolvesCurrentUser;
+
     public function __construct(private readonly WorkspaceContext $context) {}
 
     public function show(Request $request): JsonResponse
@@ -38,7 +41,7 @@ final class AlertPreferenceController
     private function preference(Request $request): AlertPreference
     {
         $workspace = $this->context->require();
-        $userId = (int) $request->user()->id;
+        $userId = (int) $this->currentUser($request)->id;
 
         return AlertPreference::forMember($workspace->id, $userId)
             ?? new AlertPreference(['workspace_id' => $workspace->id, 'user_id' => $userId]);

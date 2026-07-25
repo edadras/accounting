@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Travel\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
 use Modules\Ledger\Models\Category;
+use Modules\Travel\Exceptions\TravelException;
 
 /**
  * One thing somebody paid for on a trip, together with the shares that say who
@@ -21,7 +23,10 @@ use Modules\Ledger\Models\Category;
 final class SplitExpense extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -41,24 +46,48 @@ final class SplitExpense extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Trip, $this>
+     */
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
     }
 
+    /**
+     * @return BelongsTo<TripMember, $this>
+     */
     public function payer(): BelongsTo
     {
         return $this->belongsTo(TripMember::class, 'payer_member_id');
     }
 
+    /**
+     * @return BelongsTo<Category, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * @return HasMany<SplitShare, $this>
+     */
     public function shares(): HasMany
     {
         return $this->hasMany(SplitShare::class);
+    }
+
+    /**
+     * The trip this expense belongs to.
+     *
+     * Everything that values an expense needs the trip's base currency, and a
+     * missing trip has to stop there: carried further it becomes an empty
+     * currency code inside a Money and a total nobody can explain.
+     */
+    public function requireTrip(): Trip
+    {
+        return $this->trip ?? throw TravelException::tripNotFound((string) $this->trip_id);
     }
 
     public function money(): Money
@@ -68,6 +97,6 @@ final class SplitExpense extends Model
 
     public function baseMoney(): Money
     {
-        return Money::of($this->base_amount, $this->trip->base_currency);
+        return Money::of($this->base_amount, $this->requireTrip()->base_currency);
     }
 }

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Payroll;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Modules\Core\Models\Workspace;
 use Modules\Core\Support\WorkspaceContext;
 use Modules\Payroll\Actions\ApprovePayrollRun;
 use Modules\Payroll\Actions\CreatePayrollRun;
@@ -123,7 +125,7 @@ final class PayrollIsolationTest extends PayrollTestCase
     }
 
     /**
-     * @return array{0: \App\Models\User, 1: \Modules\Core\Models\Workspace, 2: \Modules\Core\Models\Workspace, 3: array{employee:string,run:string,payslip:string}}
+     * @return array{0: User, 1: Workspace, 2: Workspace, 3: array{employee:string,run:string,payslip:string}}
      */
     private function twoCompanies(): array
     {

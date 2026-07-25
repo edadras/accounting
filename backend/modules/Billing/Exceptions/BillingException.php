@@ -15,6 +15,7 @@ use RuntimeException;
  */
 final class BillingException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,

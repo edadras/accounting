@@ -16,6 +16,7 @@ use RuntimeException;
  */
 final class LedgerException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,
@@ -71,6 +72,15 @@ final class LedgerException extends RuntimeException
     public static function transferToSameAccount(): self
     {
         return new self('transfer_to_same_account', 'Source and destination accounts must differ.');
+    }
+
+    public static function transactionVanished(string $transactionId): self
+    {
+        return new self(
+            'transaction_vanished',
+            "Transaction [{$transactionId}] disappeared while it was being written.",
+            500,
+        );
     }
 
     public static function unbalanced(string $transactionId, int $difference): self

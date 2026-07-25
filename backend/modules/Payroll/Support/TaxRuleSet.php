@@ -142,7 +142,7 @@ final readonly class TaxRuleSet
         $previous = null;
 
         foreach ($rows as $row) {
-            $upTo = isset($row['up_to']) && $row['up_to'] !== null ? (int) $row['up_to'] : null;
+            $upTo = isset($row['up_to']) ? (int) $row['up_to'] : null;
 
             if ($upTo !== null && $upTo < 0) {
                 throw PayrollException::negativeAmount('up_to');
@@ -168,7 +168,7 @@ final readonly class TaxRuleSet
         $rules = [];
 
         foreach ($rows as $row) {
-            $cap = isset($row['cap']) && $row['cap'] !== null ? (int) $row['cap'] : null;
+            $cap = isset($row['cap']) ? (int) $row['cap'] : null;
 
             if ($cap !== null && $cap < 0) {
                 throw PayrollException::negativeAmount('cap');

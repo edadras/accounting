@@ -78,7 +78,7 @@ final class AllowanceController
             'period' => $payment->period,
             'amount' => $this->presentMoney($payment->money()),
             'transaction_id' => $payment->transaction_id,
-            'paid_at' => $payment->paid_at?->toIso8601String(),
+            'paid_at' => $payment->paid_at->toIso8601String(),
         ];
     }
 }

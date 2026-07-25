@@ -28,7 +28,13 @@ final class SearchIndexer
     /**
      * Which models are searchable, under which group, over which columns.
      *
-     * @var array<string, array{class-string<Model>, list<string>}>
+     * The class-strings are spelled out rather than left as class-string<Model>
+     * because a searchable model has to be more than a Model: it soft-deletes
+     * (the provider hooks `restored`) and it belongs to a workspace (the
+     * reindex command goes past that scope deliberately). Naming the three
+     * makes a fourth that lacks either one fail here rather than at boot.
+     *
+     * @var array<string, array{class-string<Transaction|Document|Category>, list<string>}>
      */
     private const SOURCES = [
         SearchEngine::TYPE_TRANSACTIONS => [Transaction::class, ['description', 'payee', 'notes']],
@@ -36,7 +42,7 @@ final class SearchIndexer
         SearchEngine::TYPE_CATEGORIES => [Category::class, ['name']],
     ];
 
-    /** @return array<string, array{class-string<Model>, list<string>}> */
+    /** @return array<string, array{class-string<Transaction|Document|Category>, list<string>}> */
     public static function sources(): array
     {
         return self::SOURCES;
@@ -104,6 +110,10 @@ final class SearchIndexer
      */
     private static function engine(): ?WritableSearchEngine
     {
+        // Typed as the contract, not as whatever happens to be bound while the
+        // code is being analysed: which engine answers is a per-deployment
+        // config choice, and this method exists precisely to cope with both.
+        /** @var SearchEngine $engine */
         $engine = app(SearchEngine::class);
 
         return $engine instanceof WritableSearchEngine ? $engine : null;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Family\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,10 @@ use Modules\Ledger\Models\Transaction;
 final class AllowancePayment extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     protected $fillable = [
@@ -35,16 +39,25 @@ final class AllowancePayment extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<FamilyMember, $this>
+     */
     public function member(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class, 'member_id');
     }
 
+    /**
+     * @return BelongsTo<FamilyMember, $this>
+     */
     public function payer(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class, 'payer_member_id');
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);

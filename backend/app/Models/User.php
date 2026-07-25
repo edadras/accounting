@@ -52,11 +52,17 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * @return HasMany<WorkspaceMember, $this>
+     */
     public function memberships(): HasMany
     {
         return $this->hasMany(WorkspaceMember::class);
     }
 
+    /**
+     * @return BelongsToMany<Workspace, $this>
+     */
     public function workspaces(): BelongsToMany
     {
         return $this->belongsToMany(Workspace::class, 'workspace_members')
@@ -64,6 +70,9 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /**
+     * @return HasMany<Workspace, $this>
+     */
     public function ownedWorkspaces(): HasMany
     {
         return $this->hasMany(Workspace::class, 'owner_id');

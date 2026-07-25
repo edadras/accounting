@@ -20,12 +20,12 @@ use Modules\I18n\Providers\I18nServiceProvider;
 use Modules\Investment\Providers\InvestmentServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
 use Modules\MarketData\Providers\MarketDataServiceProvider;
+use Modules\Payroll\Providers\PayrollServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
 use Modules\Reports\Providers\ReportsServiceProvider;
 use Modules\Search\Providers\SearchServiceProvider;
 use Modules\Security\Providers\SecurityServiceProvider;
 use Modules\Sync\Providers\SyncServiceProvider;
-use Modules\Payroll\Providers\PayrollServiceProvider;
 use Modules\Travel\Providers\TravelServiceProvider;
 
 return [

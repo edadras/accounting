@@ -6,6 +6,7 @@ namespace Modules\Ledger\Models;
 
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,10 @@ final class Transaction extends Model
     use Auditable;
     use BelongsToWorkspace;
     use HasDocuments;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -58,21 +62,33 @@ final class Transaction extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function counterAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'counter_account_id');
     }
 
+    /**
+     * @return BelongsTo<Category, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * @return HasMany<Entry, $this>
+     */
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class);
@@ -94,16 +110,28 @@ final class Transaction extends Model
         return $this->type === self::TYPE_EXPENSE ? -$this->base_amount : $this->base_amount;
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOfType(Builder $query, string $type): Builder
     {
         return $query->where('type', $type);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeBetween(Builder $query, \DateTimeInterface $from, \DateTimeInterface $to): Builder
     {
         return $query->whereBetween('occurred_at', [$from, $to]);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeInCategorySubtree(Builder $query, Category $category): Builder
     {
         return $query->whereIn('category_id', $category->descendantIds());

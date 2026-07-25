@@ -162,15 +162,20 @@ final class DocumentController
      */
     private function resolveRecord(Request $request): Model
     {
-        $data = $request->validate([
+        $request->validate([
             'type' => ['required', 'string', 'max:64'],
             'id' => ['required', 'string', 'max:64'],
         ]);
 
-        $class = AttachableTypes::resolve($data['type']);
+        // Read back through string(): find() given an array would answer with a
+        // collection, and a collection is not a record.
+        $type = $request->string('type')->toString();
+        $id = $request->string('id')->toString();
 
-        return $class::query()->find($data['id'])
-            ?? throw DocumentException::attachableNotFound($data['type'], $data['id']);
+        $class = AttachableTypes::resolve($type);
+
+        return $class::query()->find($id)
+            ?? throw DocumentException::attachableNotFound($type, $id);
     }
 
     private function authorizeWrite(Request $request): void

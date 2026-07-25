@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Travel\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,10 @@ use Modules\Ledger\Models\Transaction;
 final class Settlement extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     protected $fillable = [
@@ -35,21 +39,33 @@ final class Settlement extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Trip, $this>
+     */
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
     }
 
+    /**
+     * @return BelongsTo<TripMember, $this>
+     */
     public function fromMember(): BelongsTo
     {
         return $this->belongsTo(TripMember::class, 'from_member_id');
     }
 
+    /**
+     * @return BelongsTo<TripMember, $this>
+     */
     public function toMember(): BelongsTo
     {
         return $this->belongsTo(TripMember::class, 'to_member_id');
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);

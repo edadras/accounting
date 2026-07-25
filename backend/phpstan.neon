@@ -1,0 +1,30 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+
+    paths:
+        - app
+        - modules
+        - database
+        - routes
+        - tests
+
+    # Model column types are derived from the migrations, and every module ships
+    # its own. The glob keeps new modules working without touching this file.
+    databaseMigrationsPath:
+        - database/migrations
+        - modules/*/Database/Migrations
+
+    # Models declare casts through the Laravel 11+ casts() method rather than the
+    # legacy $casts property, so PHPStan has to read it to see the real types.
+    parseModelCastsMethod: true
+
+    # env() is only safe where config is built; each module ships its own config
+    # file, so those directories count as config directories too.
+    configDirectories:
+        - config
+        - modules/*/Config
+
+    ignoreErrors: []

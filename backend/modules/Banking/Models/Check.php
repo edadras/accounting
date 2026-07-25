@@ -6,6 +6,7 @@ namespace Modules\Banking\Models;
 
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,10 @@ use Modules\Ledger\Models\Transaction;
 final class Check extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -79,11 +83,17 @@ final class Check extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
@@ -117,11 +127,19 @@ final class Check extends Model
             : Transaction::TYPE_EXPENSE;
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeDueBefore(Builder $query, \DateTimeInterface $date): Builder
     {
         return $query->whereDate('due_date', '<=', $date);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeWithStatus(Builder $query, string $status): Builder
     {
         return $query->where('status', $status);

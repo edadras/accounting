@@ -83,7 +83,16 @@ final class DataExportController
             after: ['size' => $export->size],
         );
 
-        return Storage::disk((string) $export->disk)->download($export->path, $export->filename());
+        // isDownloadable() has already established this, but the path is what
+        // is about to be handed to the filesystem: it gets its own check rather
+        // than an assumption two methods away.
+        $path = $export->path;
+
+        if ($path === null) {
+            throw DataOpsException::exportNotReady($export->status);
+        }
+
+        return Storage::disk((string) $export->disk)->download($path, $export->filename());
     }
 
     private function authorizeExport(Request $request): WorkspaceMember

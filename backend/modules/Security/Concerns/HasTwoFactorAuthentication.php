@@ -18,6 +18,9 @@ use Modules\Security\Support\RecoveryCodes;
  */
 trait HasTwoFactorAuthentication
 {
+    /**
+     * @return HasMany<TwoFactorChallenge, $this>
+     */
     public function twoFactorChallenges(): HasMany
     {
         return $this->hasMany(TwoFactorChallenge::class);
@@ -109,7 +112,7 @@ trait HasTwoFactorAuthentication
     private function storeRecoveryCodes(array $codes): void
     {
         $this->forceFill([
-            'two_factor_recovery_codes' => json_encode(array_values($codes)),
+            'two_factor_recovery_codes' => json_encode($codes),
         ])->save();
     }
 }

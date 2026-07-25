@@ -28,7 +28,7 @@ final readonly class IssueTwoFactorChallenge
             'user_id' => $user->id,
             'token_hash' => TwoFactorChallenge::hashToken($token),
             'expires_at' => now()->addMinutes(TwoFactorChallenge::LIFETIME_MINUTES),
-            'ip' => request()?->ip(),
+            'ip' => request()->ip(),
         ]);
 
         return [

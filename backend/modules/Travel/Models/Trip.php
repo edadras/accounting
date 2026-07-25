@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Travel\Models;
 
 use App\Core\Money\Currency;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,7 +20,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Trip extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -35,16 +39,25 @@ final class Trip extends Model
         ];
     }
 
+    /**
+     * @return HasMany<TripMember, $this>
+     */
     public function members(): HasMany
     {
         return $this->hasMany(TripMember::class);
     }
 
+    /**
+     * @return HasMany<SplitExpense, $this>
+     */
     public function expenses(): HasMany
     {
         return $this->hasMany(SplitExpense::class);
     }
 
+    /**
+     * @return HasMany<Settlement, $this>
+     */
     public function settlements(): HasMany
     {
         return $this->hasMany(Settlement::class);

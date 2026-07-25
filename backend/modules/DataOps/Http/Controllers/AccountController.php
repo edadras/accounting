@@ -7,6 +7,7 @@ namespace Modules\DataOps\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\DataOps\Actions\CancelAccountDeletion;
 use Modules\DataOps\Actions\ScheduleAccountDeletion;
 use Modules\DataOps\Exceptions\DataOpsException;
@@ -21,13 +22,15 @@ use Modules\DataOps\Support\AccountDeletion;
  */
 final class AccountController
 {
+    use ResolvesCurrentUser;
+
     public function destroy(Request $request, ScheduleAccountDeletion $schedule): JsonResponse
     {
         $data = $request->validate([
             'password' => ['required', 'string'],
         ]);
 
-        $user = $request->user();
+        $user = $this->currentUser($request);
 
         // Deleting an account is the one operation a stolen token must not be
         // enough for on its own.
@@ -50,7 +53,7 @@ final class AccountController
 
     public function restore(Request $request, CancelAccountDeletion $cancel): JsonResponse
     {
-        $cancel->handle($request->user());
+        $cancel->handle($this->currentUser($request));
 
         return response()->json([
             'data' => ['status' => 'active'],

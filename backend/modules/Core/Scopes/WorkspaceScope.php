@@ -16,12 +16,17 @@ use Modules\Core\Support\WorkspaceContext;
  * across workspaces is a severe security bug, not a display glitch. Because it
  * is a global scope, forgetting a `where` in one controller cannot cause one.
  *
- * Bypassing it requires the explicit, greppable `withoutWorkspaceScope()`.
+ * Bypassing it requires the explicit, greppable `withoutWorkspaceScope()`,
+ * declared as a real query scope on BelongsToWorkspace so the escape hatch is
+ * visible to static analysis instead of hiding behind a builder macro.
  */
 final class WorkspaceScope implements Scope
 {
     public const NAME = 'workspace';
 
+    /**
+     * @param  Builder<Model>  $builder
+     */
     public function apply(Builder $builder, Model $model): void
     {
         $workspaceId = app(WorkspaceContext::class)->id();
@@ -36,12 +41,5 @@ final class WorkspaceScope implements Scope
         }
 
         $builder->where($model->qualifyColumn('workspace_id'), $workspaceId);
-    }
-
-    public function extend(Builder $builder): void
-    {
-        $builder->macro('withoutWorkspaceScope', function (Builder $builder): Builder {
-            return $builder->withoutGlobalScope(self::NAME);
-        });
     }
 }

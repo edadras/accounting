@@ -21,6 +21,22 @@ use Modules\Ledger\Actions\ExchangeRateResolver;
  * The number is allocated inside the same transaction as the insert, so a
  * failure later on does not burn a number that then shows up as a gap in the
  * books.
+ *
+ * @phpstan-type InvoicePayload array{
+ *   id?: string,
+ *   number?: string|null,
+ *   direction?: string,
+ *   contact_id?: string|null,
+ *   project_id?: string|null,
+ *   issue_date?: DateTimeInterface|string|null,
+ *   due_date?: DateTimeInterface|string|null,
+ *   currency: string,
+ *   fx_rate?: float|string|null,
+ *   discount?: int|null,
+ *   status?: string|null,
+ *   notes?: string|null,
+ *   items: list<array<string, mixed>>,
+ * }
  */
 final readonly class CreateInvoice
 {
@@ -32,21 +48,7 @@ final readonly class CreateInvoice
     ) {}
 
     /**
-     * @param  array{
-     *   id?: string,
-     *   number?: string|null,
-     *   direction?: string,
-     *   contact_id?: string|null,
-     *   project_id?: string|null,
-     *   issue_date?: DateTimeInterface|string|null,
-     *   due_date?: DateTimeInterface|string|null,
-     *   currency: string,
-     *   fx_rate?: float|string|null,
-     *   discount?: int|null,
-     *   status?: string|null,
-     *   notes?: string|null,
-     *   items: list<array<string, mixed>>,
-     * }  $data
+     * @param  InvoicePayload  $data
      */
     public function handle(array $data): Invoice
     {
@@ -112,7 +114,15 @@ final readonly class CreateInvoice
                 ]);
             }
 
-            return $invoice->fresh(['items', 'contact', 'project']);
+            $saved = $invoice->fresh(['items', 'contact', 'project']);
+
+            if ($saved === null) {
+                // The invoice we just wrote is gone; the in-memory copy would
+                // report line items that are no longer on the books.
+                throw BusinessException::invoiceNotFound($invoice->id);
+            }
+
+            return $saved;
         });
     }
 

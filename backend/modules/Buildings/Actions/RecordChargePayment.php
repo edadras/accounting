@@ -76,7 +76,7 @@ final readonly class RecordChargePayment
         }
 
         return DB::transaction(function () use ($charge, $amount, $building, $fund, $paidAt, $reference, $idempotencyKey): BuildingCharge {
-            $unitNo = $charge->unit()->first()?->unit_no ?? '?';
+            $unitNo = $charge->unit()->first()->unit_no ?? '?';
 
             $transaction = $this->record->handle([
                 'type' => Transaction::TYPE_INCOME,

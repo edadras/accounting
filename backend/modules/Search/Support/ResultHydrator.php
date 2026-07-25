@@ -68,30 +68,32 @@ final class ResultHydrator
      */
     private function transactions(array $ids): array
     {
-        return Transaction::query()
-            ->with('category:id,name,path')
-            ->whereIn('id', $ids)
-            ->orderByDesc('occurred_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (Transaction $transaction): array => [
-                'id' => $transaction->id,
-                'type' => $transaction->type,
-                'description' => $transaction->description,
-                'payee' => $transaction->payee,
-                'notes' => $transaction->notes,
-                'amount' => [
-                    'value' => $transaction->amount,
-                    'currency' => $transaction->currency,
-                ],
-                'occurred_at' => $transaction->occurred_at?->toIso8601String(),
-                'category' => $transaction->category === null ? null : [
-                    'id' => $transaction->category->id,
-                    'name' => $transaction->category->name,
-                    'path' => $transaction->category->path,
-                ],
-            ])
-            ->all();
+        return array_values(
+            Transaction::query()
+                ->with('category:id,name,path')
+                ->whereIn('id', $ids)
+                ->orderByDesc('occurred_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (Transaction $transaction): array => [
+                    'id' => $transaction->id,
+                    'type' => $transaction->type,
+                    'description' => $transaction->description,
+                    'payee' => $transaction->payee,
+                    'notes' => $transaction->notes,
+                    'amount' => [
+                        'value' => $transaction->amount,
+                        'currency' => $transaction->currency,
+                    ],
+                    'occurred_at' => $transaction->occurred_at->toIso8601String(),
+                    'category' => $transaction->category === null ? null : [
+                        'id' => $transaction->category->id,
+                        'name' => $transaction->category->name,
+                        'path' => $transaction->category->path,
+                    ],
+                ])
+                ->all()
+        );
     }
 
     /**
@@ -100,20 +102,22 @@ final class ResultHydrator
      */
     private function documents(array $ids): array
     {
-        return Document::query()
-            ->whereIn('id', $ids)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (Document $document): array => [
-                'id' => $document->id,
-                'original_name' => $document->original_name,
-                'kind' => $document->kind,
-                'mime' => $document->mime,
-                'size' => $document->size,
-                'ocr_status' => $document->ocr_status,
-            ])
-            ->all();
+        return array_values(
+            Document::query()
+                ->whereIn('id', $ids)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (Document $document): array => [
+                    'id' => $document->id,
+                    'original_name' => $document->original_name,
+                    'kind' => $document->kind,
+                    'mime' => $document->mime,
+                    'size' => $document->size,
+                    'ocr_status' => $document->ocr_status,
+                ])
+                ->all()
+        );
     }
 
     /**
@@ -122,17 +126,19 @@ final class ResultHydrator
      */
     private function categories(array $ids): array
     {
-        return Category::query()
-            ->whereIn('id', $ids)
-            ->orderBy('path')
-            ->get()
-            ->map(fn (Category $category): array => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'path' => $category->path,
-                'type' => $category->type,
-                'depth' => $category->depth,
-            ])
-            ->all();
+        return array_values(
+            Category::query()
+                ->whereIn('id', $ids)
+                ->orderBy('path')
+                ->get()
+                ->map(fn (Category $category): array => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'path' => $category->path,
+                    'type' => $category->type,
+                    'depth' => $category->depth,
+                ])
+                ->all()
+        );
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Security\Support;
 
-use PragmaRX\Google2FA\Exceptions\Google2FAException;
 use PragmaRX\Google2FA\Google2FA;
 use Throwable;
 
@@ -39,7 +38,7 @@ final readonly class TwoFactorAuthenticator
             // One step either side of now, so a code typed as the clock rolls
             // over is still accepted.
             return $this->google2fa->verifyKey($secret, $code, 1) !== false;
-        } catch (Google2FAException|Throwable) {
+        } catch (Throwable) {
             // A malformed secret or a code with letters in it is a failed
             // attempt, not a server error.
             return false;

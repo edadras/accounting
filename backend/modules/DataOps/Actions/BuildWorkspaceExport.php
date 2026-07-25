@@ -12,6 +12,7 @@ use Modules\Audit\Support\AuditRecorder;
 use Modules\Core\Models\Workspace;
 use Modules\DataOps\Models\DataExport;
 use Modules\DataOps\Support\ExportSchema;
+use RuntimeException;
 use Throwable;
 use ZipArchive;
 
@@ -47,6 +48,14 @@ final readonly class BuildWorkspaceExport
                 ."/{$workspace->id}/{$export->id}.zip";
 
             $stream = fopen($archive, 'rb');
+
+            if ($stream === false) {
+                // The archive was built a moment ago; if it cannot be reopened
+                // the export must fail rather than store an empty file that
+                // looks like a complete copy of the books.
+                throw new RuntimeException("Unable to read the export archive at [{$archive}].");
+            }
+
             Storage::disk($disk)->writeStream($path, $stream);
 
             if (is_resource($stream)) {
@@ -97,15 +106,17 @@ final readonly class BuildWorkspaceExport
                 $query->whereNull('deleted_at');
             }
 
-            $tables[$table] = $query
-                ->orderBy('id')
-                ->get()
-                ->map(fn (object $row): array => ExportSchema::present(
-                    $table,
-                    (array) $row,
-                    $workspace->base_currency,
-                ))
-                ->all();
+            $tables[$table] = array_values(
+                $query
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn (\stdClass $row): array => ExportSchema::present(
+                        $table,
+                        (array) $row,
+                        $workspace->base_currency,
+                    ))
+                    ->all()
+            );
         }
 
         return $tables;
@@ -120,13 +131,15 @@ final readonly class BuildWorkspaceExport
             return [];
         }
 
-        return DB::table('documents')
-            ->where('workspace_id', $workspace->id)
-            ->whereNull('deleted_at')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (object $row): array => (array) $row)
-            ->all();
+        return array_values(
+            DB::table('documents')
+                ->where('workspace_id', $workspace->id)
+                ->whereNull('deleted_at')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (\stdClass $row): array => (array) $row)
+                ->all()
+        );
     }
 
     /**
@@ -139,7 +152,7 @@ final readonly class BuildWorkspaceExport
         $temporary = tempnam(sys_get_temp_dir(), 'finora-export-');
 
         if ($temporary === false) {
-            throw new \RuntimeException('Could not open a temporary file for the export.');
+            throw new RuntimeException('Could not open a temporary file for the export.');
         }
 
         $zip = new ZipArchive;

@@ -34,10 +34,16 @@ final readonly class UpdateEmployee
      */
     public function handle(Employee $employee, array $data): Employee
     {
-        foreach (['employee_number', 'name', 'job_title', 'email', 'phone', 'national_id', 'notes'] as $field) {
+        foreach (['employee_number', 'job_title', 'email', 'phone', 'national_id', 'notes'] as $field) {
             if (array_key_exists($field, $data)) {
                 $employee->{$field} = $data[$field];
             }
+        }
+
+        // name is the one field of the set that the table will not take a null
+        // for; an explicit null means "leave it alone", not "erase the person".
+        if (isset($data['name'])) {
+            $employee->name = $data['name'];
         }
 
         if (array_key_exists('country', $data) && $data['country'] !== null) {

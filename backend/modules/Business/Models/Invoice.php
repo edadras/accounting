@@ -6,6 +6,7 @@ namespace Modules\Business\Models;
 
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Invoice extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -75,21 +79,33 @@ final class Invoice extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Contact, $this>
+     */
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
     }
 
+    /**
+     * @return BelongsTo<Project, $this>
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * @return HasMany<InvoiceItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<Payment, $this>
+     */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
@@ -161,17 +177,30 @@ final class Invoice extends Model
             && ! in_array($this->status, [self::STATUS_PAID, self::STATUS_VOID], true);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOfDirection(Builder $query, string $direction): Builder
     {
         return $query->where('direction', $direction);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOpen(Builder $query): Builder
     {
         return $query->whereNotIn('status', [self::STATUS_PAID, self::STATUS_VOID]);
     }
 
-    /** Void invoices never count toward anything a report shows. */
+    /**
+     * Void invoices never count toward anything a report shows.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeCountable(Builder $query): Builder
     {
         return $query->where('status', '!=', self::STATUS_VOID);

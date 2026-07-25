@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Banking\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,10 @@ use Modules\Ledger\Models\Account;
 final class Loan extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const INTEREST_SIMPLE = 'simple';
@@ -54,16 +58,25 @@ final class Loan extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Bank, $this>
+     */
     public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return HasMany<LoanInstallment, $this>
+     */
     public function installments(): HasMany
     {
         return $this->hasMany(LoanInstallment::class)->orderBy('number');

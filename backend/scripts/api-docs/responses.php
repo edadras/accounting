@@ -6,7 +6,6 @@ declare(strict_types=1);
  * Responses attached to every operation by the generator, so that 175
  * operations do not each repeat them.
  */
-
 $envelope = fn (string $description, string $example, array $extra = []): array => [
     'description' => $description,
     'content' => [

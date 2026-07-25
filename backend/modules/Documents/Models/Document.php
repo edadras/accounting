@@ -6,6 +6,7 @@ namespace Modules\Documents\Models;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,7 +25,10 @@ use Modules\Core\Concerns\HasUlidKey;
 final class Document extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -85,11 +89,17 @@ final class Document extends Model
         ];
     }
 
+    /**
+     * @return HasMany<Documentable, $this>
+     */
     public function documentables(): HasMany
     {
         return $this->hasMany(Documentable::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
@@ -114,7 +124,11 @@ final class Document extends Model
             ->delete();
     }
 
-    /** @param  class-string<Model>  $type */
+    /**
+     * @param  class-string<Model>  $type
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeAttachedTo(Builder $query, string $type, string $id): Builder
     {
         return $query->whereHas(

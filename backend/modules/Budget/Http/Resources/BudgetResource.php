@@ -22,7 +22,7 @@ final class BudgetResource extends JsonResource
             'scope' => $this->scope,
             'scope_id' => $this->scope_id,
             'period' => $this->period,
-            'starts_at' => $this->starts_at?->toIso8601String(),
+            'starts_at' => $this->starts_at->toIso8601String(),
             'ends_at' => $this->ends_at?->toIso8601String(),
 
             // Money always travels as {value, currency, minor_unit, decimal};

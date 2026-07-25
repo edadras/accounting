@@ -37,13 +37,13 @@ final readonly class StoreTaxRuleSet
         $workspace = $this->context->require();
         $country = strtoupper(trim($data['country']));
 
-        $effectiveFrom = isset($data['effective_from']) && $data['effective_from'] !== null
+        $effectiveFrom = isset($data['effective_from'])
             ? CarbonImmutable::parse($data['effective_from'])->startOfDay()
             : CarbonImmutable::now()->startOfYear();
 
         $rules = $data['rules'];
         $name = $data['name'] ?? null;
-        $currency = isset($data['currency']) && $data['currency'] !== null
+        $currency = isset($data['currency'])
             ? strtoupper($data['currency'])
             : null;
 

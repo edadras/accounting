@@ -50,12 +50,12 @@ final class MarketRateController
                     ? $resolver->rate($base, $quote)
                     : (string) $latest->rate,
 
-                'source' => $latest?->source ?? 'fallback',
+                'source' => $latest->source ?? 'fallback',
                 'rated_at' => $latest?->rated_at?->toIso8601String(),
                 'history' => $history->map(fn (ExchangeRate $row): array => [
                     'rate' => (string) $row->rate,
                     'source' => $row->source,
-                    'rated_at' => $row->rated_at?->toIso8601String(),
+                    'rated_at' => $row->rated_at->toIso8601String(),
                 ])->values(),
             ],
             'meta' => [

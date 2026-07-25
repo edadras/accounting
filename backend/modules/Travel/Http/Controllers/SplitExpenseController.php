@@ -13,6 +13,9 @@ use Modules\Travel\Http\Requests\StoreSplitExpenseRequest;
 use Modules\Travel\Http\Resources\SplitExpenseResource;
 use Modules\Travel\Models\SplitExpense;
 
+/**
+ * @phpstan-import-type SplitExpensePayload from SplitExpenseAction
+ */
 final class SplitExpenseController
 {
     use ResolvesTrip;
@@ -55,7 +58,11 @@ final class SplitExpenseController
     public function store(StoreSplitExpenseRequest $request, string $tripId, SplitExpenseAction $split): JsonResponse
     {
         $trip = $this->trip($tripId);
-        $expense = $split->handle($trip, $request->validated());
+
+        /** @var SplitExpensePayload $payload */
+        $payload = $request->validated();
+
+        $expense = $split->handle($trip, $payload);
 
         return (new SplitExpenseResource($expense->load(['shares', 'trip'])))
             ->response()

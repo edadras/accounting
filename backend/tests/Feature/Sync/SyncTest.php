@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -576,7 +577,7 @@ final class SyncTest extends LedgerTestCase
 
     /**
      * @param  list<array<string, mixed>>  $changes
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @return TestResponse<Response>
      */
     private function push(User $user, Workspace $workspace, array $changes, ?Device $device = null): TestResponse
     {
@@ -590,7 +591,7 @@ final class SyncTest extends LedgerTestCase
 
     /**
      * @param  array<string, mixed>  $query
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @return TestResponse<Response>
      */
     private function pull(User $user, Workspace $workspace, array $query, ?Device $device = null): TestResponse
     {

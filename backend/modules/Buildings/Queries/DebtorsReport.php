@@ -33,11 +33,15 @@ final readonly class DebtorsReport
      */
     public function handle(Building $building, ?string $period = null): Collection
     {
-        /** @var Collection<int, object> $rows */
-        $rows = BuildingCharge::query()
+        $query = BuildingCharge::query()
             ->where('building_id', $building->id)
-            ->outstanding()
-            ->when($period !== null, fn ($query) => $query->forPeriod($period))
+            ->outstanding();
+
+        if ($period !== null) {
+            $query->forPeriod($period);
+        }
+
+        $rows = $query
             ->selectRaw('unit_id, currency, COUNT(*) as charges_count, MIN(period) as oldest_period, SUM(amount - paid_amount) as owed')
             ->groupBy('unit_id', 'currency')
             ->get();
@@ -48,9 +52,12 @@ final readonly class DebtorsReport
             ->keyBy('id');
 
         return $rows
-            ->map(function (object $row) use ($units): ?array {
+            // The three aggregates are read through getAttribute(): they are
+            // columns of this query, not of the charges table, so the model has
+            // no declared property for them.
+            ->map(function (BuildingCharge $row) use ($units): ?array {
                 $unit = $units->get($row->unit_id);
-                $owed = (int) $row->owed;
+                $owed = (int) $row->getAttribute('owed');
 
                 if ($unit === null || $owed <= 0) {
                     return null;
@@ -61,9 +68,9 @@ final readonly class DebtorsReport
                     'unit_no' => $unit->unit_no,
                     'owner_name' => $unit->owner_name,
                     'tenant_name' => $unit->tenant_name,
-                    'charges_count' => (int) $row->charges_count,
-                    'oldest_period' => (string) $row->oldest_period,
-                    'owed' => Money::of($owed, (string) $row->currency),
+                    'charges_count' => (int) $row->getAttribute('charges_count'),
+                    'oldest_period' => (string) $row->getAttribute('oldest_period'),
+                    'owed' => Money::of($owed, $row->currency),
                 ];
             })
             ->filter()
@@ -74,7 +81,11 @@ final readonly class DebtorsReport
             ->values();
     }
 
-    /** Everything the building is owed, per currency. @return Collection<string, Money> */
+    /**
+     * Everything the building is owed, per currency.
+     *
+     * @return Collection<string, Money>
+     */
     public function totals(Building $building, ?string $period = null): Collection
     {
         return $this->handle($building, $period)

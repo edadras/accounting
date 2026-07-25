@@ -22,7 +22,10 @@ final class InvestmentController
     public function index(Request $request, WorkspaceContext $context, ExchangeRateResolver $rates): JsonResponse
     {
         $investments = Investment::query()
-            ->when($request->query('kind'), fn ($q, $kind) => $q->ofKind((string) $kind))
+            ->when(
+                $request->filled('kind'),
+                fn ($q) => $q->ofKind($request->string('kind')->toString()),
+            )
             ->orderBy('name')
             ->get();
 

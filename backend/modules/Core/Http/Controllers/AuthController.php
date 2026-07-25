@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Modules\Audit\Support\AuditRecorder;
 use Modules\Core\Actions\CreateWorkspace;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\Security\Actions\IssueTwoFactorChallenge;
 
 final class AuthController
 {
+    use ResolvesCurrentUser;
+
     public function register(Request $request, CreateWorkspace $createWorkspace): JsonResponse
     {
         $data = $request->validate([
@@ -108,7 +111,7 @@ final class AuthController
         // does not sign the user out on their laptop.
         app(AuditRecorder::class)->record('auth.logout', $request->user());
 
-        $request->user()->currentAccessToken()->delete();
+        $this->currentUser($request)->currentAccessToken()->delete();
 
         return response()->json(status: 204);
     }

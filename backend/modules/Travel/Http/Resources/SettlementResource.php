@@ -22,7 +22,7 @@ final class SettlementResource extends JsonResource
             'from_member_id' => $this->from_member_id,
             'to_member_id' => $this->to_member_id,
             'amount' => MoneyPayload::from($this->money()),
-            'settled_at' => $this->settled_at?->toIso8601String(),
+            'settled_at' => $this->settled_at->toIso8601String(),
             'transaction_id' => $this->transaction_id,
         ];
     }

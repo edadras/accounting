@@ -28,11 +28,17 @@ final class Documentable extends Model
         'workspace_id', 'document_id', 'documentable_type', 'documentable_id',
     ];
 
+    /**
+     * @return BelongsTo<Document, $this>
+     */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class);
     }
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function documentable(): MorphTo
     {
         return $this->morphTo();

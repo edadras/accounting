@@ -7,11 +7,14 @@ namespace Modules\Audit\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Audit\Models\AuditLog;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\Core\Models\WorkspaceMember;
 use Modules\Core\Support\WorkspaceContext;
 
 final class AuditLogController
 {
+    use ResolvesCurrentUser;
+
     /** The workspace's trail. Owner and admin only — it exposes what everyone did. */
     public function index(Request $request, WorkspaceContext $context): JsonResponse
     {
@@ -71,7 +74,7 @@ final class AuditLogController
     public function personal(Request $request): JsonResponse
     {
         $logs = AuditLog::query()
-            ->forUser($request->user()->id)
+            ->forUser($this->currentUser($request)->id)
             ->whereNull('workspace_id')
             ->orderByDesc('created_at')
             ->limit(min((int) $request->query('limit', 50), 200))
@@ -94,7 +97,7 @@ final class AuditLogController
             'after' => $log->after,
             'ip' => $log->ip,
             'user_agent' => $log->user_agent,
-            'created_at' => $log->created_at?->toIso8601String(),
+            'created_at' => $log->created_at->toIso8601String(),
             'user' => $log->relationLoaded('user') && $log->user !== null
                 ? ['id' => $log->user->id, 'name' => $log->user->name]
                 : null,

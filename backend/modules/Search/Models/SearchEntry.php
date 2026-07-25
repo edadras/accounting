@@ -26,6 +26,9 @@ final class SearchEntry extends Model
         'workspace_id', 'type', 'indexable_type', 'indexable_id', 'content',
     ];
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function indexable(): MorphTo
     {
         return $this->morphTo();

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Modules\Audit\Support\AuditRecorder;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\Security\Exceptions\SecurityException;
 use Modules\Security\Models\TwoFactorChallenge;
 use Modules\Security\Support\TwoFactorAuthenticator;
@@ -20,6 +21,8 @@ use Modules\Security\Support\TwoFactorAuthenticator;
  */
 final class TwoFactorController
 {
+    use ResolvesCurrentUser;
+
     public function __construct(
         private readonly TwoFactorAuthenticator $authenticator,
         private readonly AuditRecorder $recorder,
@@ -33,7 +36,7 @@ final class TwoFactorController
      */
     public function enable(Request $request): JsonResponse
     {
-        $user = $this->user($request);
+        $user = $this->currentUser($request);
 
         if ($user->hasTwoFactorEnabled()) {
             throw SecurityException::twoFactorAlreadyEnabled();
@@ -65,7 +68,7 @@ final class TwoFactorController
     {
         $data = $request->validate(['code' => ['required', 'string', 'max:16']]);
 
-        $user = $this->user($request);
+        $user = $this->currentUser($request);
 
         if ($user->hasTwoFactorEnabled()) {
             throw SecurityException::twoFactorAlreadyEnabled();
@@ -85,14 +88,16 @@ final class TwoFactorController
 
         RateLimiter::clear('2fa-confirm:'.$user->id);
 
-        $user->forceFill(['two_factor_confirmed_at' => now()])->save();
+        $confirmedAt = now();
+
+        $user->forceFill(['two_factor_confirmed_at' => $confirmedAt])->save();
         $codes = $user->regenerateRecoveryCodes();
 
         $this->recorder->record('auth.two_factor_enabled', $user);
 
         return response()->json([
             'data' => [
-                'confirmed_at' => $user->two_factor_confirmed_at->toIso8601String(),
+                'confirmed_at' => $confirmedAt->toIso8601String(),
                 // Shown once. They are encrypted at rest and never returned again.
                 'recovery_codes' => $codes,
             ],
@@ -110,7 +115,7 @@ final class TwoFactorController
             'code' => ['nullable', 'string', 'max:32'],
         ]);
 
-        $user = $this->user($request);
+        $user = $this->currentUser($request);
 
         if (! $user->hasTwoFactorEnabled() && ! $user->isEnrollingInTwoFactor()) {
             throw SecurityException::twoFactorNotEnabled();
@@ -205,7 +210,7 @@ final class TwoFactorController
     /** The current state, so a client can render the security screen. */
     public function status(Request $request): JsonResponse
     {
-        $user = $this->user($request);
+        $user = $this->currentUser($request);
 
         return response()->json([
             'data' => [
@@ -215,12 +220,6 @@ final class TwoFactorController
                 'recovery_codes_remaining' => count($user->recoveryCodes()),
             ],
         ]);
-    }
-
-    /** Typed, because the second-factor helpers live on the User model. */
-    private function user(Request $request): User
-    {
-        return $request->user();
     }
 
     private function throttle(string $key, int $maxAttempts = 5, int $decaySeconds = 60): void

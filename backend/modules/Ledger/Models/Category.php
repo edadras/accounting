@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,7 +28,10 @@ final class Category extends Model
 {
     use Auditable;
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -64,16 +68,25 @@ final class Category extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<self, $this>
+     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /**
+     * @return HasMany<self, $this>
+     */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<Transaction, $this>
+     */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
@@ -102,7 +115,12 @@ final class Category extends Model
         }
     }
 
-    /** All categories at or beneath this one — one indexed prefix scan. */
+    /**
+     * All categories at or beneath this one — one indexed prefix scan.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeInSubtreeOf(Builder $query, self $category): Builder
     {
         return $query->where(function (Builder $q) use ($category): void {
@@ -114,10 +132,13 @@ final class Category extends Model
     /** @return list<string> */
     public function descendantIds(): array
     {
-        return self::query()
-            ->inSubtreeOf($this)
-            ->pluck('id')
-            ->all();
+        return array_values(
+            self::query()
+                ->inSubtreeOf($this)
+                ->pluck('id')
+                ->map(strval(...))
+                ->all()
+        );
     }
 
     /** Human-readable trail: "خانه ← خوراک ← رستوران" */

@@ -105,7 +105,9 @@ final class EmbedCommand extends Command
                 // One provider call per chunk rather than per row: with a
                 // remote model that is the difference between a backfill that
                 // finishes and one that is still going tomorrow.
-                $vectors = $provider->embedBatch($pending->pluck('content')->map(strval(...))->all());
+                $vectors = $provider->embedBatch(
+                    array_values($pending->pluck('content')->map(strval(...))->all())
+                );
 
                 foreach ($pending as $index => $entry) {
                     EmbeddingIndexer::store(

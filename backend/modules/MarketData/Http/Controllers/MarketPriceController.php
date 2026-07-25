@@ -50,7 +50,7 @@ final class MarketPriceController
                     'price' => (string) $row->price,
                     'currency' => $row->currency,
                     'source' => $row->source,
-                    'captured_at' => $row->captured_at?->toIso8601String(),
+                    'captured_at' => $row->captured_at->toIso8601String(),
                 ])->values(),
                 'positions' => InvestmentResource::collection($positions),
             ],

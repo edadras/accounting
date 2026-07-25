@@ -6,6 +6,7 @@ namespace Modules\Recurring\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -25,7 +26,10 @@ use Modules\Recurring\Exceptions\RecurringException;
 final class RecurringRule extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -79,6 +83,9 @@ final class RecurringRule extends Model
      *
      * `auto_post` rules only: a rule with auto_post false is a reminder, and
      * posting it would put money in the books the user never confirmed.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeDue(Builder $query, \DateTimeInterface $at): Builder
     {
@@ -127,7 +134,13 @@ final class RecurringRule extends Model
      */
     public function payloadFor(\DateTimeInterface $occurredAt): array
     {
-        $template = is_array($this->template) ? $this->template : [];
+        // The column is a JSON object, so its keys are strings; re-keying says
+        // so rather than leaving the payload's shape to chance.
+        $template = [];
+
+        foreach ($this->template as $key => $value) {
+            $template[(string) $key] = $value;
+        }
 
         $missing = array_values(array_filter(
             self::REQUIRED_TEMPLATE_KEYS,

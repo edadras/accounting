@@ -52,7 +52,7 @@ final readonly class BuildInvoice
     public function handle(array $data): InvoiceTotals
     {
         $currency = Currency::of((string) $data['currency']);
-        $items = array_values($data['items'] ?? []);
+        $items = $data['items'];
 
         if ($items === []) {
             throw BusinessException::invoiceHasNoItems();
@@ -95,7 +95,7 @@ final readonly class BuildInvoice
             $discounts[] = $discount;
         }
 
-        $this->spreadInvoiceDiscount((int) ($data['discount'] ?? 0), $currency, $lineTotals, $discounts);
+        $discounts = $this->spreadInvoiceDiscount((int) ($data['discount'] ?? 0), $currency, $lineTotals, $discounts);
 
         $lines = [];
         $subtotal = 0;
@@ -143,17 +143,22 @@ final readonly class BuildInvoice
      * Lines already discounted to nothing are left out of the weighting, so a
      * share can never exceed what is left of a line.
      *
+     * Returns the per-line discounts with the invoice-wide share folded in,
+     * rather than writing through a reference: the caller then has one list of
+     * discounts and no way to read a half-updated one.
+     *
      * @param  list<int>  $lineTotals
      * @param  list<int>  $discounts
+     * @return list<int>
      */
     private function spreadInvoiceDiscount(
         int $invoiceDiscount,
         Currency $currency,
         array $lineTotals,
-        array &$discounts,
-    ): void {
+        array $discounts,
+    ): array {
         if ($invoiceDiscount === 0) {
-            return;
+            return $discounts;
         }
 
         if ($invoiceDiscount < 0) {
@@ -183,5 +188,10 @@ final readonly class BuildInvoice
         foreach ($positions as $slot => $index) {
             $discounts[$index] += $shares[$slot]->minorUnits;
         }
+
+        // The loop only ever writes back to offsets that already exist, but
+        // that is invisible from outside; re-indexing keeps the list<int> the
+        // caller was promised.
+        return array_values($discounts);
     }
 }

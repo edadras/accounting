@@ -45,6 +45,9 @@ final class Subscription extends Model
         ];
     }
 
+    /**
+     * @return HasMany<SubscriptionInvoice, $this>
+     */
     public function invoices(): HasMany
     {
         return $this->hasMany(SubscriptionInvoice::class);

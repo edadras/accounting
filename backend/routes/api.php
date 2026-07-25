@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Http\Controllers\AuthController;
@@ -15,14 +17,19 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
-        Route::get('me', fn (Request $request) => response()->json([
-            'data' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email,
-                'locale' => $request->user()->locale ?? 'fa',
-            ],
-        ]));
+        Route::get('me', function (Request $request): JsonResponse {
+            // Behind auth:sanctum, so a null user here is a routing mistake.
+            $user = $request->user() ?? throw new AuthenticationException;
+
+            return response()->json([
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'locale' => $user->locale ?? 'fa',
+                ],
+            ]);
+        });
 
         // Workspace listing cannot itself require a workspace header — this is
         // how the client discovers which ids it may send.

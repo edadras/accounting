@@ -24,7 +24,7 @@ final class CheckResource extends JsonResource
             'check_number' => $this->check_number,
             'amount' => MoneyView::of($this->amount, $this->currency),
             'base_amount' => $this->base_amount,
-            'due_date' => $this->due_date?->toDateString(),
+            'due_date' => $this->due_date->toDateString(),
             'status' => $this->status,
             'party_name' => $this->party_name,
             'notes' => $this->notes,

@@ -69,7 +69,10 @@ final readonly class QuietHours
     {
         $moment = CarbonImmutable::instance($at);
 
-        if (! $this->covers($moment)) {
+        // The endMinutes check is what covers() already implies through
+        // isEmpty(); stating it here keeps the window's closing time provably
+        // a number rather than a maybe-null.
+        if (! $this->covers($moment) || $this->endMinutes === null) {
             return $moment->utc();
         }
 

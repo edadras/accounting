@@ -10,6 +10,7 @@ use Laravel\Sanctum\Sanctum;
 use Modules\Core\Models\Workspace;
 use Modules\Core\Support\WorkspaceContext;
 use Modules\Ledger\Models\Account;
+use Modules\Payroll\Actions\CreatePayrollRun;
 use Modules\Payroll\Models\PayrollRun;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -421,7 +422,7 @@ final class PayrollApiTest extends PayrollTestCase
         // A viewer must not be able to approve, pay or discard either, and that
         // is checked in the controller rather than in a form request.
         $runId = $this->inWorkspace($workspace, function () use ($account) {
-            return app(\Modules\Payroll\Actions\CreatePayrollRun::class)->handle([
+            return app(CreatePayrollRun::class)->handle([
                 'period_start' => '2026-03-01',
                 'period_end' => '2026-03-31',
                 'account_id' => $account->id,

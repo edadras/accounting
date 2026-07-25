@@ -28,7 +28,7 @@ final class InvestmentTransactionResource extends JsonResource
             'realized_profit' => InvestmentResource::money($this->realizedProfitMoney()),
             'base' => InvestmentResource::money($this->baseMoney()) + ['fx_rate' => $this->fx_rate],
 
-            'occurred_at' => $this->occurred_at?->toIso8601String(),
+            'occurred_at' => $this->occurred_at->toIso8601String(),
             'notes' => $this->notes,
             'transaction_id' => $this->transaction_id,
             'created_at' => $this->created_at?->toIso8601String(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Actions;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Modules\Ledger\Actions\RecordTransaction;
 use Modules\Ledger\Models\Transaction;
@@ -18,6 +19,8 @@ use Modules\Recurring\Models\RecurringRule;
  * transaction carries an idempotency key derived from the rule and the
  * occurrence date, so even a rule whose advance was rolled back cannot produce
  * a duplicate.
+ *
+ * @phpstan-import-type TransactionPayload from RecordTransaction
  */
 final readonly class PostDueRecurring
 {
@@ -75,13 +78,23 @@ final readonly class PostDueRecurring
             }
 
             $posted[] = DB::transaction(function () use ($rule, $due): Transaction {
-                $transaction = $this->record->handle($rule->payloadFor($due));
+                // payloadFor() has already refused anything missing a required
+                // key, so what comes back is a complete ledger payload.
+                /** @var TransactionPayload $payload */
+                $payload = $rule->payloadFor($due);
+
+                $transaction = $this->record->handle($payload);
 
                 // Advanced inside the same database transaction as the posting:
                 // a rule that moved on without its transaction would silently
                 // skip a month.
-                $rule->next_run_at = $rule->occurrenceAfter($due);
-                $rule->last_run_at = $due;
+                $next = $rule->occurrenceAfter($due);
+
+                // The columns are cast to a mutable Carbon; converting here
+                // keeps the rule's own arithmetic immutable without the model
+                // holding two different date types.
+                $rule->next_run_at = $next === null ? null : Carbon::instance($next);
+                $rule->last_run_at = Carbon::instance($due);
                 $rule->save();
 
                 return $transaction;

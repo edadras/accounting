@@ -23,6 +23,12 @@ final readonly class Period
 
         $start = CarbonImmutable::createFromFormat('Y-m-d H:i:s', $period.'-01 00:00:00');
 
+        if ($start === null) {
+            // The pattern above should make this unreachable; if the parser
+            // still refuses the string, it is not a period.
+            throw FamilyException::invalidPeriod($period);
+        }
+
         return new self($period, $start->startOfMonth(), $start->endOfMonth());
     }
 

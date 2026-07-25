@@ -17,6 +17,7 @@ use RuntimeException;
  */
 final class DocumentException extends RuntimeException
 {
+    /** @param array<string, mixed> $details */
     private function __construct(
         public readonly string $errorCode,
         string $message,
@@ -26,6 +27,7 @@ final class DocumentException extends RuntimeException
         parent::__construct($message);
     }
 
+    /** @param list<string> $allowed */
     public static function forbiddenAttachableType(string $type, array $allowed): self
     {
         return new self(

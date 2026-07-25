@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Security\Notifications;
 
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use InvalidArgumentException;
 
 /**
  * Carries the one and only copy of the plaintext reset token out of the system.
@@ -34,6 +36,15 @@ final class PasswordResetRequested extends Notification
 
     private function resetUrl(object $notifiable): string
     {
+        if (! $notifiable instanceof CanResetPassword) {
+            // The link is only meaningful for something that can actually reset
+            // a password; anything else would produce a URL with no address in
+            // it and a user staring at a broken form.
+            throw new InvalidArgumentException(
+                'A password reset link can only be built for a CanResetPassword notifiable.'
+            );
+        }
+
         return rtrim((string) config('app.url'), '/').'/reset-password?'.http_build_query([
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),

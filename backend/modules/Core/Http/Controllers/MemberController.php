@@ -8,12 +8,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Modules\Core\Actions\ManageMembership;
+use Modules\Core\Http\Concerns\ResolvesCurrentUser;
 use Modules\Core\Models\WorkspaceInvitation;
 use Modules\Core\Models\WorkspaceMember;
 use Modules\Core\Support\WorkspaceContext;
 
 final class MemberController
 {
+    use ResolvesCurrentUser;
+
     public function index(Request $request, WorkspaceContext $context): JsonResponse
     {
         $this->assertCanManage($request);
@@ -54,7 +57,7 @@ final class MemberController
             workspace: $context->require(),
             email: $data['email'],
             role: $data['role'],
-            invitedBy: $request->user(),
+            invitedBy: $this->currentUser($request),
         );
 
         return response()->json([
@@ -118,7 +121,7 @@ final class MemberController
         ManageMembership $membership,
         string $token,
     ): JsonResponse {
-        $member = $membership->accept($token, $request->user());
+        $member = $membership->accept($token, $this->currentUser($request));
 
         return response()->json([
             'data' => [

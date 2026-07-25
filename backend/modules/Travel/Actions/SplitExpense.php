@@ -23,6 +23,21 @@ use Modules\Travel\Models\TripMember;
  * was paid in *and* in the trip's base currency. A cent that disappears here
  * reappears at settlement as a debt nobody can pay off, so every mode routes
  * through Money's allocation helpers rather than dividing and rounding.
+ *
+ * @phpstan-type SplitExpensePayload array{
+ *   id?: string,
+ *   payer_member_id: string,
+ *   amount: int,
+ *   currency?: string|null,
+ *   fx_rate?: float|string|null,
+ *   category_id?: string|null,
+ *   occurred_at?: \DateTimeInterface|string|null,
+ *   description?: string|null,
+ *   latitude?: float|null,
+ *   longitude?: float|null,
+ *   mode?: string,
+ *   participants?: list<array{member_id: string, percent?: string|float|int, weight?: int, amount?: int}>,
+ * }
  */
 final readonly class SplitExpense
 {
@@ -31,20 +46,7 @@ final readonly class SplitExpense
     ) {}
 
     /**
-     * @param  array{
-     *   id?: string,
-     *   payer_member_id: string,
-     *   amount: int,
-     *   currency?: string|null,
-     *   fx_rate?: float|string|null,
-     *   category_id?: string|null,
-     *   occurred_at?: \DateTimeInterface|string|null,
-     *   description?: string|null,
-     *   latitude?: float|null,
-     *   longitude?: float|null,
-     *   mode?: string,
-     *   participants?: list<array{member_id: string, percent?: string|float|int, weight?: int, amount?: int}>,
-     * }  $data
+     * @param  SplitExpensePayload  $data
      */
     public function handle(Trip $trip, array $data): SplitExpenseRecord
     {
@@ -70,7 +72,9 @@ final readonly class SplitExpense
         }
 
         $baseCurrency = $trip->baseCurrency();
-        $rate = isset($data['fx_rate']) && $data['fx_rate'] !== null
+        // isset() is already false for a null fx_rate, so this covers both the
+        // absent key and an explicit null.
+        $rate = isset($data['fx_rate'])
             ? (string) $data['fx_rate']
             : $this->rates->rate($currency, $baseCurrency);
         $baseAmount = $amount->convertTo($baseCurrency, $rate);
@@ -115,7 +119,15 @@ final readonly class SplitExpense
                 ]);
             }
 
-            return $expense->fresh(['shares', 'payer', 'trip']);
+            $saved = $expense->fresh(['shares', 'payer', 'trip']);
+
+            if ($saved === null) {
+                // The expense we just wrote is gone; returning the in-memory
+                // copy would hand back shares the trip no longer holds.
+                throw TravelException::expenseNotFound($expense->id);
+            }
+
+            return $saved;
         });
     }
 
@@ -186,6 +198,10 @@ final readonly class SplitExpense
                 $amount, $baseAmount, $this->explicitWeights($participants)
             ),
             SplitShare::MODE_EXACT => $this->exact($amount, $baseAmount, $participants),
+            // handle() rejects unknown modes, but without this arm a new mode
+            // added to SplitShare::MODES would fail here with an
+            // UnhandledMatchError instead of the module's own refusal.
+            default => throw TravelException::unknownSplitMode($mode),
         };
 
         $allocation = [];

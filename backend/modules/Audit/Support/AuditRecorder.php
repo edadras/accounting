@@ -94,8 +94,8 @@ final class AuditRecorder
                 'subject_id' => $subject?->getKey() === null ? null : (string) $subject->getKey(),
                 'before' => $before === null ? null : $this->clean($before),
                 'after' => $after === null ? null : $this->clean($after),
-                'ip' => $request?->ip(),
-                'user_agent' => substr((string) $request?->userAgent(), 0, 255) ?: null,
+                'ip' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255) ?: null,
             ]);
         } catch (Throwable) {
             return null;

@@ -46,16 +46,27 @@ final class Alert extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeDue(Builder $query, \DateTimeInterface $at): Builder
     {
         return $query->where('status', self::STATUS_PENDING)->where('scheduled_at', '<=', $at);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeUnread(Builder $query): Builder
     {
         return $query->whereNull('read_at');
@@ -63,13 +74,26 @@ final class Alert extends Model
 
     public function isDeferred(): bool
     {
-        return $this->status === self::STATUS_PENDING && $this->scheduled_at?->isFuture() === true;
+        return $this->status === self::STATUS_PENDING && $this->scheduled_at->isFuture() === true;
     }
 
-    /** @return array<string, string> */
+    /**
+     * Per-channel delivery status, keyed by channel.
+     *
+     * The column is a JSON object written by the deliverer, so the values are
+     * normalised here rather than trusted to already be strings.
+     *
+     * @return array<string, string>
+     */
     public function deliveries(): array
     {
-        return is_array($this->channels) ? $this->channels : [];
+        $deliveries = [];
+
+        foreach ($this->channels as $channel => $status) {
+            $deliveries[(string) $channel] = (string) $status;
+        }
+
+        return $deliveries;
     }
 
     public function deliveryStatus(string $channel): ?string

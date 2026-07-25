@@ -24,6 +24,7 @@ use Modules\Payroll\Models\Payslip;
 use Modules\Payroll\Models\PayslipLine;
 use Modules\Payroll\Support\CompensationProrator;
 use Modules\Payroll\Support\PayPeriod;
+use Modules\Payroll\Support\PayslipLineDraft;
 use Modules\Payroll\Support\Percentage;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -876,7 +877,7 @@ final class PayrollTest extends PayrollTestCase
     }
 
     /**
-     * @param  list<\Modules\Payroll\Support\PayslipLineDraft>  $lines
+     * @param  list<PayslipLineDraft>  $lines
      */
     private function lineAmount(array $lines, string $code): int
     {

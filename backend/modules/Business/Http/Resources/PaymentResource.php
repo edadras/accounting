@@ -25,7 +25,7 @@ final class PaymentResource extends JsonResource
             'contact_id' => $this->contact_id,
             'account_id' => $this->account_id,
             'amount' => $this->presentMoney($this->money()),
-            'paid_at' => $this->paid_at?->toIso8601String(),
+            'paid_at' => $this->paid_at->toIso8601String(),
             'method' => $this->method,
 
             // The ledger posting this payment produced; balances come from

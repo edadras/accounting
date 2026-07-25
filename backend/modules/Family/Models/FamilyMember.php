@@ -7,6 +7,7 @@ namespace Modules\Family\Models;
 use App\Core\Money\Money;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,10 @@ use Modules\Ledger\Models\Account;
 final class FamilyMember extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
 
     public const ROLE_PARENT = 'parent';
@@ -66,16 +70,25 @@ final class FamilyMember extends Model
         return self::tagFor($this->id);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return HasMany<AllowancePayment, $this>
+     */
     public function allowancePayments(): HasMany
     {
         return $this->hasMany(AllowancePayment::class, 'member_id');
@@ -100,6 +113,10 @@ final class FamilyMember extends Model
             : Money::of($this->spending_cap, $this->currency);
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOfRole(Builder $query, string $role): Builder
     {
         return $query->where('role', $role);

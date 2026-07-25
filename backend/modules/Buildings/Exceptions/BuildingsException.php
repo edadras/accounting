@@ -138,7 +138,7 @@ final class BuildingsException extends RuntimeException implements Responsable
                 'code' => $this->errorCode,
                 'message' => $this->getMessage(),
                 'details' => $this->details,
-                'request_id' => $request?->header('X-Request-Id'),
+                'request_id' => $request->header('X-Request-Id'),
             ],
         ], $this->status);
     }

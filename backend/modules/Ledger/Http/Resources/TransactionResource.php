@@ -41,7 +41,7 @@ final class TransactionResource extends JsonResource
             'counter_account_id' => $this->counter_account_id,
             'category_id' => $this->category_id,
 
-            'account' => $this->whenLoaded('account', fn () => [
+            'account' => $this->whenLoaded('account', fn () => $this->account === null ? null : [
                 'id' => $this->account->id,
                 'name' => $this->account->name,
                 'type' => $this->account->type,
@@ -63,7 +63,7 @@ final class TransactionResource extends JsonResource
                 'base_amount' => $entry->base_amount,
             ])->all()),
 
-            'occurred_at' => $this->occurred_at?->toIso8601String(),
+            'occurred_at' => $this->occurred_at->toIso8601String(),
             'description' => $this->description,
             'notes' => $this->notes,
             'payee' => $this->payee,

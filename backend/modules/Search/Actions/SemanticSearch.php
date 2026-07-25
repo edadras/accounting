@@ -88,7 +88,9 @@ final readonly class SemanticSearch
         }
 
         $allowedTransactions = $this->transactionsMatching($filter);
-        $vectors = $this->vectorsFor($entries->pluck('indexable_id')->all());
+        $vectors = $this->vectorsFor(
+            array_values($entries->pluck('indexable_id')->map(strval(...))->all())
+        );
         $needle = $this->embeddings->embed($normalized);
 
         $minimum = (float) config('search.semantic.min_similarity', 0.12);

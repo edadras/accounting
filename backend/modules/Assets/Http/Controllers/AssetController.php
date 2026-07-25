@@ -20,7 +20,10 @@ final class AssetController
     public function index(Request $request, WorkspaceContext $context, ExchangeRateResolver $rates): JsonResponse
     {
         $assets = Asset::query()
-            ->when($request->query('kind'), fn ($q, $kind) => $q->ofKind((string) $kind))
+            ->when(
+                $request->filled('kind'),
+                fn ($q) => $q->ofKind($request->string('kind')->toString()),
+            )
             ->orderBy('name')
             ->get();
 

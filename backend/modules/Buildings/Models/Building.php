@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Buildings\Models;
 
 use App\Core\Money\Money;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,7 +22,10 @@ use Modules\Ledger\Models\Account;
 final class Building extends Model
 {
     use BelongsToWorkspace;
+
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
+
     use HasUlidKey;
     use SoftDeletes;
 
@@ -52,21 +56,33 @@ final class Building extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function fundAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'fund_account_id');
     }
 
+    /**
+     * @return HasMany<BuildingUnit, $this>
+     */
     public function units(): HasMany
     {
         return $this->hasMany(BuildingUnit::class, 'building_id');
     }
 
+    /**
+     * @return HasMany<BuildingCharge, $this>
+     */
     public function charges(): HasMany
     {
         return $this->hasMany(BuildingCharge::class, 'building_id');
     }
 
+    /**
+     * @return HasMany<BuildingExpense, $this>
+     */
     public function expenses(): HasMany
     {
         return $this->hasMany(BuildingExpense::class, 'building_id');

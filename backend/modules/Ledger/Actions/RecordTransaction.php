@@ -20,6 +20,28 @@ use Modules\Ledger\Models\Transaction;
  * Everything happens inside one database transaction: a posting that updated a
  * balance but failed to write its second entry would leave the books wrong in a
  * way no report could detect.
+ *
+ * @phpstan-type TransactionPayload array{
+ *   id?: string,
+ *   type: string,
+ *   account_id: string,
+ *   counter_account_id?: string|null,
+ *   category_id?: string|null,
+ *   amount: int,
+ *   currency: string,
+ *   fx_rate?: float|string|null,
+ *   occurred_at?: \DateTimeInterface|string|null,
+ *   description?: string|null,
+ *   notes?: string|null,
+ *   payee?: string|null,
+ *   reference?: string|null,
+ *   tags?: array<string>|null,
+ *   source?: string,
+ *   source_meta?: array<string, mixed>|null,
+ *   latitude?: float|null,
+ *   longitude?: float|null,
+ *   idempotency_key?: string|null,
+ * }
  */
 final readonly class RecordTransaction
 {
@@ -29,27 +51,7 @@ final readonly class RecordTransaction
     ) {}
 
     /**
-     * @param  array{
-     *   id?: string,
-     *   type: string,
-     *   account_id: string,
-     *   counter_account_id?: string|null,
-     *   category_id?: string|null,
-     *   amount: int,
-     *   currency: string,
-     *   fx_rate?: float|string|null,
-     *   occurred_at?: \DateTimeInterface|string|null,
-     *   description?: string|null,
-     *   notes?: string|null,
-     *   payee?: string|null,
-     *   reference?: string|null,
-     *   tags?: array<string>|null,
-     *   source?: string,
-     *   source_meta?: array<string, mixed>|null,
-     *   latitude?: float|null,
-     *   longitude?: float|null,
-     *   idempotency_key?: string|null,
-     * }  $data
+     * @param  TransactionPayload  $data
      */
     public function handle(array $data): Transaction
     {
@@ -166,7 +168,17 @@ final readonly class RecordTransaction
             $account->recalculateBalance();
             $counterAccount?->recalculateBalance();
 
-            return $transaction->fresh(['account', 'counterAccount', 'category', 'entries']);
+            $saved = $transaction->fresh(['account', 'counterAccount', 'category', 'entries']);
+
+            if ($saved === null) {
+                // The row we just wrote is gone: something outside this
+                // transaction deleted it. Rolling back is the only safe answer
+                // — returning the in-memory copy would report entries the
+                // ledger no longer holds.
+                throw LedgerException::transactionVanished($transaction->id);
+            }
+
+            return $saved;
         });
     }
 
@@ -210,6 +222,9 @@ final readonly class RecordTransaction
             Transaction::TYPE_TRANSFER => $this->postTransfer(
                 $write, $account, $counterAccount, $amount, $baseAmount
             ),
+            // Without this arm an unrecognised type would silently write no
+            // entries at all: a transaction on the books backed by nothing.
+            default => throw LedgerException::unknownTransactionType($transaction->type),
         };
     }
 

@@ -6,6 +6,7 @@ namespace Tests\Feature\Search;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
@@ -328,8 +329,8 @@ final class SemanticSearchTest extends LedgerTestCase
     }
 
     /**
-     * @param array<string, string|int> $extra
-     * @return TestResponse<\Illuminate\Http\Response>
+     * @param  array<string, string|int>  $extra
+     * @return TestResponse<Response>
      */
     private function semantic(Workspace $workspace, string $query, array $extra = []): TestResponse
     {
