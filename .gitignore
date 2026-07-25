@@ -1,0 +1,51 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+auth.json
+
+# PHP / Laravel
+/backend/vendor/
+/backend/node_modules/
+/backend/public/storage
+/backend/public/hot
+/backend/storage/*.key
+/backend/storage/app/public/*
+/backend/storage/framework/cache/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*
+/backend/.phpunit.result.cache
+/backend/.phpunit.cache
+
+# Flutter / Dart
+/app/.dart_tool/
+/app/.packages
+/app/build/
+/app/.flutter-plugins
+/app/.flutter-plugins-dependencies
+/app/ios/Pods/
+/app/ios/.symlinks/
+/app/android/.gradle/
+/app/android/local.properties
+/app/android/key.properties
+*.jks
+*.keystore
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local infra
+/docker/data/
+/storage-local/
