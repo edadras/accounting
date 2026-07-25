@@ -1,0 +1,55 @@
+name: finora
+description: Finora — Personal Financial Operating System
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  # 3.6 is the floor for Color.withValues, which the neon effects use
+  # throughout instead of the deprecated withOpacity.
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State & routing
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+
+  # Network
+  dio: ^5.5.0
+
+  # Storage
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.2
+
+  # Formatting
+  intl: ^0.19.0
+  shamsi_date: ^1.0.4
+
+  # Utils
+  ulid: ^2.0.0
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Fonts are not bundled by default so that `flutter run` works on a fresh
+  # clone. Run `scripts/fetch_fonts.sh` and uncomment this block to enable
+  # Vazirmatn (the intended Persian/Arabic typeface).
+  #
+  # fonts:
+  #   - family: Vazirmatn
+  #     fonts:
+  #       - asset: assets/fonts/Vazirmatn-Regular.ttf
+  #       - asset: assets/fonts/Vazirmatn-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Vazirmatn-Bold.ttf
+  #         weight: 700

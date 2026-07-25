@@ -14,13 +14,26 @@ Finora یک **سیستم‌عامل مالی (Financial OS / Personal ERP)** ب�
 
 | بخش | وضعیت |
 |---|---|
-| مستندات معماری و نقشه راه | ✅ در این مخزن |
-| Backend (Laravel 12 / PHP 8.4) | ⏳ فاز M1 |
-| Mobile & Desktop (Flutter) | ⏳ فاز M2 |
-| AI / OCR / Semantic Search | ⏳ فاز M5 |
+| مستندات معماری و نقشه راه | ✅ کامل |
+| Backend — هستهٔ مالی (M1) | ✅ پیاده‌سازی شد ([`backend/`](backend/)) |
+| اپلیکیشن Flutter با استایل نئون (M2) | ✅ پیاده‌سازی شد ([`app/`](app/)) |
+| بودجه و گزارش‌ها (M3) | ⏳ بعدی |
+| AI / OCR / جستجوی معنایی (M5) | ⏳ |
 
-این مخزن در حال حاضر **مرحلهٔ صفر (M0 — Foundation)** است: تثبیت چشم‌انداز، معماری،
-مدل داده و برنامهٔ اجرایی، پیش از نوشتن اولین خط کد محصول.
+### آنچه امروز کار می‌کند
+
+**Backend** — احراز هویت، Workspace، حساب‌ها، دستهٔ بی‌نهایت‌سطح، و موتور
+تراکنش دوطرفهٔ چندارزی. ۳۶ تست، ۱۲۲۷ ادعا، همه سبز.
+
+**اپلیکیشن** — داشبورد، لیست تراکنش، ثبت سریع، حساب‌ها و تنظیمات با یک
+Design System نئونی کامل؛ چهار زبان با RTL/LTR واقعی. اپ بدون بک‌اند هم
+اجرا می‌شود (مخزن درون‌حافظه‌ای) تا از همان لحظهٔ اول قابل دیدن باشد.
+
+```bash
+docker compose up -d                       # MySQL, Redis, Meilisearch, MinIO, Mailpit
+cd backend && composer install && php artisan migrate && php artisan serve
+cd app     && flutter pub get && flutter run
+```
 
 ---
 

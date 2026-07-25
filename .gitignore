@@ -49,3 +49,7 @@ Thumbs.db
 # Local infra
 /docker/data/
 /storage-local/
+
+# Local dev database
+/backend/database/*.sqlite
+/backend/database/*.sqlite-journal
