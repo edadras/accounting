@@ -12,11 +12,52 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+    <!--
+        Coverage needs a driver: run with XDEBUG_MODE=coverage, or install PCOV.
+        Without one PHPUnit prints "No code coverage driver available" and the
+        run still passes, which is why CI asks for pcov explicitly rather than
+        trusting the report to appear.
+
+        Targets from docs/10-quality-and-dod.md §4 — checked by reading the
+        report, not enforced by a failUnder threshold here, because a single
+        repo-wide number cannot express a per-area target:
+
+            modules/Ledger + app/Core/Money   90%
+            modules/Sync                      85%
+            all other domain modules          80%
+            Flutter UI                        no numeric target; critical
+                                              paths are covered by goldens
+    -->
     <source>
         <include>
+            <!-- app/ holds Money and Currency: the 90% target's other half. -->
             <directory>app</directory>
+            <!-- The domain lives in modules/, so excluding it would report
+                 coverage of the Laravel skeleton and call it the product. -->
+            <directory>modules</directory>
         </include>
+        <exclude>
+            <!-- Migrations, service providers, route files and config are
+                 executed by booting the framework at all. Counting them
+                 inflates every figure above and hides the untested logic. -->
+            <directory>modules/*/Database/Migrations</directory>
+            <directory>modules/*/Database/Seeders</directory>
+            <directory>modules/*/Providers</directory>
+            <directory>modules/*/Routes</directory>
+            <directory>modules/*/Config</directory>
+            <directory>app/Providers</directory>
+        </exclude>
     </source>
+
+    <coverage>
+        <!-- Files, not stdout: a text summary on every local run is noise.
+             CI passes the text flag itself when it wants the numbers in the
+             job log. -->
+        <report>
+            <clover outputFile="storage/coverage/clover.xml"/>
+            <html outputDirectory="storage/coverage/html"/>
+        </report>
+    </coverage>
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
