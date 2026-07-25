@@ -46,7 +46,14 @@ final class PayrollRunResource extends JsonResource
             'approved_by' => $this->approved_by,
             'paid_at' => $this->paid_at?->toIso8601String(),
 
-            'payslip_count' => $this->whenLoaded('payslips', fn () => $this->payslips->count()),
+            // The list endpoint counts without loading and the detail endpoint
+            // loads without counting, so asking only about the relation left
+            // this permanently missing on the one screen that wanted it.
+            'payslip_count' => $this->whenCounted(
+                'payslips',
+                fn () => $this->payslips_count,
+                $this->whenLoaded('payslips', fn () => $this->payslips->count()),
+            ),
             'payslips' => PayslipResource::collection($this->whenLoaded('payslips')),
 
             'notes' => $this->notes,

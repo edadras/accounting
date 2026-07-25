@@ -9486,7 +9486,7 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
         409:
-          description: '`payroll_run_immutable` — the run has been approved or paid.'
+          description: '`payroll_run_not_a_draft` — an approved run has reached the ledger, so the way back is a reversing entry, not a delete.'
           content:
             application/json:
               schema:
@@ -9585,7 +9585,7 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
         409:
-          description: '`payroll_run_not_approvable` — the run is already paid, or has no payslips.'
+          description: '`payroll_run_is_paid` when the run has already been paid, `payroll_run_has_no_employees` when nobody was employed during the period.'
           content:
             application/json:
               schema:
@@ -9621,10 +9621,10 @@ paths:
             schema:
               type: object
               properties:
-                pay_date:
+                paid_at:
                   type: string
                   format: date
-                  description: 'Defaults to today.'
+                  description: "Defaults to today. Note this sets `paid_at`; `pay_date` is the run's intended date and is set at creation."
       security:
         -
           bearerAuth: []
@@ -9649,7 +9649,7 @@ paths:
         404:
           $ref: '#/components/responses/NotFound'
         409:
-          description: '`payroll_run_not_payable` — the run has not been approved.'
+          description: '`payroll_run_not_approved` — approve it first; paying is what records that the money left, and approving is what posted it.'
           content:
             application/json:
               schema:

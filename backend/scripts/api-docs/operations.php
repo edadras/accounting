@@ -1773,21 +1773,21 @@ return [
         'responses' => [
             200 => $res('Approved and posted. `net_transaction_id` and `liability_transaction_id` are now set.', $data($R('PayrollRun'))),
             404 => ['$ref' => '#/components/responses/NotFound'],
-            409 => $res('`payroll_run_not_approvable` — the run is already paid, or has no payslips.', $R('Error')),
+            409 => $res('`payroll_run_is_paid` when the run has already been paid, `payroll_run_has_no_employees` when nobody was employed during the period.', $R('Error')),
         ]],
     'POST /api/v1/payroll/runs/{id}/pay' => ['id' => 'payPayrollRun', 'tag' => 'Payroll', 'summary' => 'Mark an approved run as paid',
-        'body' => $body(['pay_date' => $date('Defaults to today.')]),
+        'body' => $body(['paid_at' => $date('Defaults to today. Note this sets `paid_at`; `pay_date` is the run\'s intended date and is set at creation.')]),
         'responses' => [
             200 => $res('Paid. The run is now immutable.', $data($R('PayrollRun'))),
             404 => ['$ref' => '#/components/responses/NotFound'],
-            409 => $res('`payroll_run_not_payable` — the run has not been approved.', $R('Error')),
+            409 => $res('`payroll_run_not_approved` — approve it first; paying is what records that the money left, and approving is what posted it.', $R('Error')),
         ]],
     'DELETE /api/v1/payroll/runs/{id}' => ['id' => 'deletePayrollRun', 'tag' => 'Payroll', 'summary' => 'Delete a draft run',
         'description' => 'Only a draft can be deleted. Once a run has been approved it has reached the ledger, and the way back is a reversing entry rather than a delete.',
         'responses' => [
             204 => $res('Deleted.'),
             404 => ['$ref' => '#/components/responses/NotFound'],
-            409 => $res('`payroll_run_immutable` — the run has been approved or paid.', $R('Error')),
+            409 => $res('`payroll_run_not_a_draft` — an approved run has reached the ledger, so the way back is a reversing entry, not a delete.', $R('Error')),
         ]],
 
     'GET /api/v1/payroll/payslips/{id}' => ['id' => 'getPayslip', 'tag' => 'Payroll', 'summary' => 'Get a payslip',

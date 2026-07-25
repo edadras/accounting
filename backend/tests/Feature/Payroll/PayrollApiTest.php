@@ -208,6 +208,27 @@ final class PayrollApiTest extends PayrollTestCase
     // ------------------------------------------------------------------ runs
 
     #[Test]
+    public function the_run_list_carries_a_payslip_count(): void
+    {
+        [$headers, $account] = $this->workspaceWithOneEmployee('count-api@example.test');
+
+        $this->postJson('/api/v1/payroll/runs', [
+            'period_start' => '2026-03-01',
+            'period_end' => '2026-03-31',
+            'account_id' => $account->id,
+            'currency' => 'TRY',
+        ], $headers)->assertCreated();
+
+        // The list counts without loading the relation and the detail endpoint
+        // loads it without counting. Asking only whether the relation was
+        // loaded left this field permanently absent from the one response that
+        // wanted it, and no test looked.
+        $this->getJson('/api/v1/payroll/runs', $headers)
+            ->assertOk()
+            ->assertJsonPath('data.0.payslip_count', 1);
+    }
+
+    #[Test]
     public function the_api_walks_a_run_from_draft_through_approved_to_paid(): void
     {
         [$headers, $account, $employeeId] = $this->workspaceWithOneEmployee('run-api@example.test');
