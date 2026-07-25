@@ -19,6 +19,8 @@ auth.json
 /backend/storage/logs/*
 /backend/.phpunit.result.cache
 /backend/.phpunit.cache
+# Written by the coverage reporters configured in backend/phpunit.xml.
+/backend/storage/coverage/
 
 # Flutter / Dart
 /app/.dart_tool/
