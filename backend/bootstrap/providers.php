@@ -25,6 +25,7 @@ use Modules\Reports\Providers\ReportsServiceProvider;
 use Modules\Search\Providers\SearchServiceProvider;
 use Modules\Security\Providers\SecurityServiceProvider;
 use Modules\Sync\Providers\SyncServiceProvider;
+use Modules\Payroll\Providers\PayrollServiceProvider;
 use Modules\Travel\Providers\TravelServiceProvider;
 
 return [
@@ -57,6 +58,7 @@ return [
     AssetsServiceProvider::class,
     BuildingsServiceProvider::class,
     BusinessServiceProvider::class,
+    PayrollServiceProvider::class,
     TravelServiceProvider::class,
     FamilyServiceProvider::class,
     RecurringServiceProvider::class,
