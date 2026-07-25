@@ -12,6 +12,17 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Redis backs the queue Horizon supervises; the suite runs on array/sync
+    # drivers, but the config must still resolve against a real connection.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 

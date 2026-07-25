@@ -10,9 +10,20 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "dompdf/dompdf": "^3.1",
+        "http-interop/http-factory-guzzle": "^1.2",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.48",
+        "laravel/reverb": "^1.11",
         "laravel/sanctum": "^4.3",
-        "laravel/tinker": "^2.10.1"
+        "laravel/scout": "^11.4",
+        "laravel/tinker": "^2.10.1",
+        "league/csv": "^9.28",
+        "league/flysystem-aws-s3-v3": "^3.35",
+        "meilisearch/meilisearch-php": "^1.16",
+        "phpoffice/phpspreadsheet": "^5.9",
+        "pragmarx/google2fa": "^9.0",
+        "spatie/laravel-backup": "^10.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

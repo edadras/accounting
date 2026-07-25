@@ -47,6 +47,19 @@ return [
             'report' => false,
         ],
 
+        // MinIO speaks the S3 API, so development uses the same driver as
+        // production and path-style addressing rather than virtual hosts.
+        'minio' => [
+            'driver' => 's3',
+            'key' => env('MINIO_KEY', 'finora'),
+            'secret' => env('MINIO_SECRET', 'secretsecret'),
+            'region' => env('MINIO_REGION', 'us-east-1'),
+            'bucket' => env('MINIO_BUCKET', 'finora'),
+            'endpoint' => env('MINIO_ENDPOINT', 'http://127.0.0.1:9000'),
+            'use_path_style_endpoint' => true,
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
