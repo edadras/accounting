@@ -4,9 +4,10 @@ Laravel 12 · PHP 8.4 · modular monolith.
 
 ## Status
 
-Milestone **M1 (Ledger Core)** from [`docs/04-roadmap.md`](../docs/04-roadmap.md):
-auth, workspaces, accounts, unlimited-depth categories, and a double-entry
-transaction engine with multi-currency support.
+Twelve domain modules covering milestones **M1, M3, M4, M6, M8 and M9** of
+[`docs/04-roadmap.md`](../docs/04-roadmap.md).
+
+**209 tests, 4664 assertions, all green.** 93 API routes.
 
 ## Running
 
@@ -23,16 +24,28 @@ php artisan serve
 MinIO and Mailpit.
 
 ```bash
-./vendor/bin/phpunit     # 36 tests, 1227 assertions
+./vendor/bin/phpunit     # 209 tests, 4664 assertions
 ./vendor/bin/pint        # formatting
 ```
 
 ## Layout
 
 ```
-app/Core/Money/          Money + Currency — the value objects everything else uses
-modules/Core/            Workspace, membership, auth, the workspace scope
-modules/Ledger/          Accounts, categories, transactions, entries
+app/Core/Money/     Money + Currency — the value objects everything else uses
+
+modules/Core/       Workspace, membership, auth, the workspace scope
+modules/Ledger/     Accounts, categories, transactions, entries
+
+modules/Budget/     Budgets, period usage, rollover, alert thresholds
+modules/Reports/    Cash flow, net worth, trends, top categories/merchants
+modules/Banking/    Banks, cheques, loans, amortisation, instalments
+modules/Investment/ Positions, weighted-average cost, realized profit, ROI
+modules/Assets/     Assets, linear and declining depreciation, insurance
+modules/Buildings/  Units, periodic charges, payments, debtors, fund
+modules/Business/   Contacts, projects, invoices, numbering, payments
+modules/Travel/     Trips, split expenses, minimum-transfer settlement
+modules/Documents/  Uploads, polymorphic attachment, OCR fields
+modules/Search/     Persian/Arabic normalisation, write-time index
 ```
 
 Each module owns its migrations, routes and container bindings, and is
@@ -111,8 +124,35 @@ tree, so the first screen the user sees is never empty.
 
 ## Tests that may never be deleted
 
+Almost every module's headline test asserts the same shape of thing: **the parts
+add up to the whole, exactly.** That is the property a finance product lives or
+dies by, and it is the one that quietly breaks first.
+
 | Test | Guarantees |
 |---|---|
 | `MoneyTest` | Mixed currencies rejected; rounding half-up; 1000 random splits reconcile |
 | `DoubleEntryTest` | Transfers net to zero; cached balances match their entries; retries are idempotent |
 | `WorkspaceIsolationTest` | Every endpoint refuses another workspace's data, at the HTTP layer |
+| `BankingTest` | Instalment principal parts sum exactly to the loan principal, across 11 awkward rate/term combinations |
+| `TravelTest` | Split shares sum exactly to the expense; a settled trip zeroes every member in at most n−1 transfers |
+| `BuildingsTest` | Charges issued across 40 units sum exactly to the total, on area, resident and fixed formulas |
+| `BusinessTest` | `Σ line totals == subtotal` and `subtotal − discount + tax == total`, with mixed per-line tax rates |
+| `AssetTest` | Depreciation over the full life sums exactly to cost − salvage, and never dips below salvage |
+| `InvestmentTest` | Weighted-average cost survives many buys; a sell never moves it; overselling is refused |
+| `BudgetTest` | Category budgets count the whole subtree; transfers and income never count as spend |
+| `ReportsTest` | Transfers appear in no report; date ranges partition without gap or overlap |
+| `SearchTest` | `گوشت` matches text written with Arabic ک/ي, harakat, ZWNJ and Persian digits |
+
+## Notes for whoever picks this up
+
+- **Search indexes at write time.** Normalising the column in SQL needs ~45
+  nested `REPLACE()` calls and SQLite's parser overflows at 31, so a
+  `search_index` table is kept in step by model events instead. Rows written
+  before the module existed are not indexed — a `search:reindex` backfill
+  command is still needed before this runs against real data.
+- **Budget scopes `project|trip|building|member` report zero.** They are stored
+  and validated, but only `overall` and `category` are computed; the single
+  place to extend is `CalculateBudgetUsage::constrainToScope()`.
+- **`HasDocuments` is not yet used by `Transaction`.** The trait and pivot exist
+  and are tested against real transaction rows through a stand-in model; wiring
+  it onto the Ledger models is a one-line change per model.
