@@ -155,6 +155,10 @@ abstract final class BundledTranslations {
       'settings.calendarJalali': 'شمسی',
       'settings.calendarGregorian': 'میلادی',
       'settings.calendarHijri': 'قمری',
+      'settings.account': 'حساب و امنیت',
+      'settings.securityHint': 'رمز عبور و ورود دومرحله‌ای',
+      'settings.exportHint': 'یک نسخهٔ کامل از داده‌های شما',
+      'settings.deleteHint': 'با فرصت انصراف',
       'settings.about': 'درباره',
 
       'common.cancel': 'انصراف',
@@ -790,6 +794,10 @@ abstract final class BundledTranslations {
       'settings.calendarJalali': 'Jalali',
       'settings.calendarGregorian': 'Gregorian',
       'settings.calendarHijri': 'Hijri',
+      'settings.account': 'Account & security',
+      'settings.securityHint': 'Password and two-step sign-in',
+      'settings.exportHint': 'A complete copy of your data',
+      'settings.deleteHint': 'With time to change your mind',
       'settings.about': 'About',
 
       'common.cancel': 'Cancel',
@@ -1425,6 +1433,10 @@ abstract final class BundledTranslations {
       'settings.calendarJalali': 'Celali',
       'settings.calendarGregorian': 'Miladi',
       'settings.calendarHijri': 'Hicri',
+      'settings.account': 'Hesap ve güvenlik',
+      'settings.securityHint': 'Parola ve iki adımlı giriş',
+      'settings.exportHint': 'Verilerinizin eksiksiz bir kopyası',
+      'settings.deleteHint': 'Fikrinizi değiştirmek için süre tanır',
       'settings.about': 'Hakkında',
 
       'common.cancel': 'İptal',
@@ -2060,6 +2072,10 @@ abstract final class BundledTranslations {
       'settings.calendarJalali': 'شمسي',
       'settings.calendarGregorian': 'ميلادي',
       'settings.calendarHijri': 'هجري',
+      'settings.account': 'الحساب والأمان',
+      'settings.securityHint': 'كلمة المرور وتسجيل الدخول بخطوتين',
+      'settings.exportHint': 'نسخة كاملة من بياناتك',
+      'settings.deleteHint': 'مع مهلة للتراجع',
       'settings.about': 'حول',
 
       'common.cancel': 'إلغاء',
