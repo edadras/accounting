@@ -30,16 +30,22 @@ jobs:
           touch database/database.sqlite
           php artisan key:generate
 
-      - name: Check migrations roll back
+      # A migration that cannot be undone turns a bad deploy into a restore
+      # from backup, so reversibility is checked on every push, not hoped for.
+      - name: Check migrations roll back and re-apply
         run: |
           php artisan migrate --force
-          php artisan migrate:rollback --step=20 --force
+          php artisan migrate:rollback --step=40 --force
+          php artisan migrate --force
 
       - name: Tests
         run: ./vendor/bin/phpunit
 
       - name: Formatting
         run: ./vendor/bin/pint --test
+
+      - name: Dependency advisories
+        run: composer audit --no-interaction
 
   app:
     name: Flutter client
@@ -53,7 +59,20 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: "3.29.0"
 
       - run: flutter pub get
       - run: flutter analyze
+
+      # Goldens included: a mirrored RTL layout or a colour that stopped
+      # meaning what it meant passes every behavioural assertion, and only an
+      # image comparison catches it.
       - run: flutter test
+
+      - name: Upload golden diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: app/test/failures/
+          if-no-files-found: ignore
