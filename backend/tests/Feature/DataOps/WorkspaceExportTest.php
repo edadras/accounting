@@ -253,7 +253,7 @@ final class WorkspaceExportTest extends DataOpsTestCase
 
         return $this->inWorkspace(
             $workspace,
-            fn () => Document::query()->findOrFail($response->json('data.id')),
+            fn () => Document::query()->findOrFail((string) $response->json('data.id')),
         );
     }
 

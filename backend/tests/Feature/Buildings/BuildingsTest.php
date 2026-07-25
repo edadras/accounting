@@ -7,6 +7,7 @@ namespace Tests\Feature\Buildings;
 use App\Core\Money\Money;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\Sanctum;
 use Modules\Buildings\Actions\IssuePeriodicCharges;
 use Modules\Buildings\Actions\RecordChargePayment;
@@ -77,14 +78,26 @@ final class BuildingsTest extends LedgerTestCase
             ->with('unit')
             ->forPeriod('2026-07')
             ->get()
-            ->keyBy(fn (BuildingCharge $charge) => $charge->unit->unit_no));
+            ->keyBy(function (BuildingCharge $charge) {
+                $unit = $charge->unit;
+                $this->assertNotNull($unit);
+
+                return $unit->unit_no;
+            }));
 
         foreach ($byUnitNo as $charge) {
             $this->assertGreaterThan(0, $charge->amount);
         }
 
-        $biggest = $byUnitNo->sortByDesc(fn (BuildingCharge $c) => $c->unit->areaWeight())->first();
-        $smallest = $byUnitNo->sortBy(fn (BuildingCharge $c) => $c->unit->areaWeight())->first();
+        $areaWeight = function (BuildingCharge $charge) {
+            $unit = $charge->unit;
+            $this->assertNotNull($unit);
+
+            return $unit->areaWeight();
+        };
+
+        $biggest = $byUnitNo->sortByDesc($areaWeight)->firstOrFail();
+        $smallest = $byUnitNo->sortBy($areaWeight)->firstOrFail();
 
         $this->assertGreaterThan($smallest->amount, $biggest->amount);
     }
@@ -135,6 +148,7 @@ final class BuildingsTest extends LedgerTestCase
 
         $this->assertSame(100, (int) $charges->sum('amount'));
 
+        /** @var non-empty-list<int> $amounts every unit in the building got a row */
         $amounts = $charges->pluck('amount')->all();
         $this->assertLessThanOrEqual(1, max($amounts) - min($amounts), 'A fixed charge must be equal to within one minor unit.');
     }
@@ -165,11 +179,16 @@ final class BuildingsTest extends LedgerTestCase
             ->with('unit')
             ->forPeriod('2026-10')
             ->get()
-            ->keyBy(fn (BuildingCharge $charge) => (string) $charge->unit->share_factor));
+            ->keyBy(function (BuildingCharge $charge) {
+                $unit = $charge->unit;
+                $this->assertNotNull($unit);
+
+                return (string) $unit->share_factor;
+            }));
 
         $this->assertEqualsWithDelta(
-            $byFactor['0.7500']->amount * 3,
-            $byFactor['2.2500']->amount,
+            $this->chargeFor($byFactor, '0.7500')->amount * 3,
+            $this->chargeFor($byFactor, '2.2500')->amount,
             3.0,
         );
     }
@@ -233,6 +252,7 @@ final class BuildingsTest extends LedgerTestCase
     public function paying_a_charge_moves_exactly_that_amount_into_the_fund(): void
     {
         [$workspace, $building, $fund] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
+        $this->assertNotNull($fund);
 
         $this->inWorkspace($workspace, function () use ($building): void {
             foreach (range(1, 4) as $i) {
@@ -243,9 +263,9 @@ final class BuildingsTest extends LedgerTestCase
         $charges = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
             ->handle($building, '2026-07', Money::of(400_000, 'TRY')));
 
-        $charge = $charges->first();
+        $charge = $this->onlyCharge($charges);
         $this->assertSame(100_000, $charge->amount);
-        $this->assertSame(0, $fund->fresh()->current_balance);
+        $this->assertSame(0, $fund->refresh()->current_balance);
 
         $paid = $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
             ->handle($charge, Money::of(100_000, 'TRY')));
@@ -257,14 +277,14 @@ final class BuildingsTest extends LedgerTestCase
 
         $this->assertSame(
             100_000,
-            $fund->fresh()->current_balance,
+            $fund->refresh()->current_balance,
             'The fund must grow by exactly the amount paid.',
         );
 
         // And the ledger agrees: the cached balance still equals its entries.
         $this->assertSame(
             100_000,
-            $this->inWorkspace($workspace, fn () => $fund->fresh()->recalculateBalance()->minorUnits),
+            $this->inWorkspace($workspace, fn () => $fund->refresh()->recalculateBalance()->minorUnits),
         );
     }
 
@@ -272,12 +292,13 @@ final class BuildingsTest extends LedgerTestCase
     public function a_partial_payment_sets_the_status_and_the_remaining_amount(): void
     {
         [$workspace, $building, $fund] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
+        $this->assertNotNull($fund);
         $this->inWorkspace($workspace, fn () => $this->makeUnit($building, '801'));
 
         $charges = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
             ->handle($building, '2026-07', Money::of(250_000, 'TRY')));
 
-        $charge = $charges->first();
+        $charge = $this->onlyCharge($charges);
 
         $partial = $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
             ->handle($charge, Money::of(90_000, 'TRY')));
@@ -285,7 +306,7 @@ final class BuildingsTest extends LedgerTestCase
         $this->assertSame(BuildingCharge::STATUS_PARTIAL, $partial->status);
         $this->assertSame(90_000, $partial->paid_amount);
         $this->assertSame(160_000, $partial->remainingMoney()->minorUnits);
-        $this->assertSame(90_000, $fund->fresh()->current_balance);
+        $this->assertSame(90_000, $fund->refresh()->current_balance);
 
         // The rest clears it, and the two instalments together equal the bill.
         $settled = $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
@@ -293,7 +314,7 @@ final class BuildingsTest extends LedgerTestCase
 
         $this->assertSame(BuildingCharge::STATUS_PAID, $settled->status);
         $this->assertSame(0, $settled->remainingMoney()->minorUnits);
-        $this->assertSame(250_000, $fund->fresh()->current_balance);
+        $this->assertSame(250_000, $fund->refresh()->current_balance);
     }
 
     #[Test]
@@ -302,8 +323,8 @@ final class BuildingsTest extends LedgerTestCase
         [$workspace, $building] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
         $this->inWorkspace($workspace, fn () => $this->makeUnit($building, '901'));
 
-        $charge = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
-            ->handle($building, '2026-07', Money::of(120_000, 'TRY')))->first();
+        $charge = $this->onlyCharge($this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
+            ->handle($building, '2026-07', Money::of(120_000, 'TRY'))));
 
         try {
             $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
@@ -314,18 +335,19 @@ final class BuildingsTest extends LedgerTestCase
             $this->assertSame('overpayment_refused', $e->errorCode);
         }
 
-        $this->assertSame(0, $charge->fresh()->paid_amount);
-        $this->assertSame(BuildingCharge::STATUS_UNPAID, $charge->fresh()->status);
+        $this->assertSame(0, $charge->refresh()->paid_amount);
+        $this->assertSame(BuildingCharge::STATUS_UNPAID, $charge->refresh()->status);
     }
 
     #[Test]
     public function overpayment_is_refused_after_a_partial_payment_too(): void
     {
         [$workspace, $building, $fund] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
+        $this->assertNotNull($fund);
         $this->inWorkspace($workspace, fn () => $this->makeUnit($building, '902'));
 
-        $charge = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
-            ->handle($building, '2026-07', Money::of(100_000, 'TRY')))->first();
+        $charge = $this->onlyCharge($this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
+            ->handle($building, '2026-07', Money::of(100_000, 'TRY'))));
 
         $charge = $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
             ->handle($charge, Money::of(60_000, 'TRY')));
@@ -337,7 +359,7 @@ final class BuildingsTest extends LedgerTestCase
                 ->handle($charge, Money::of(40_001, 'TRY')));
         } finally {
             // Nothing leaked into the fund on the refused attempt.
-            $this->assertSame(60_000, $fund->fresh()->current_balance);
+            $this->assertSame(60_000, $fund->refresh()->current_balance);
         }
     }
 
@@ -362,15 +384,21 @@ final class BuildingsTest extends LedgerTestCase
                 ->with('unit')
                 ->forPeriod('2026-07')
                 ->get()
-                ->keyBy(fn (BuildingCharge $charge) => $charge->unit->unit_no);
+                ->keyBy(function (BuildingCharge $charge) {
+                    $unit = $charge->unit;
+                    $this->assertNotNull($unit);
+
+                    return $unit->unit_no;
+                });
         });
 
         // A pays in full and drops off the list. B pays part of its bill. C and
         // D pay nothing.
         $this->inWorkspace($workspace, function () use ($charges): void {
             $pay = app(RecordChargePayment::class);
-            $pay->handle($charges['A'], Money::of($charges['A']->amount, 'TRY'));
-            $pay->handle($charges['B'], Money::of(150_000, 'TRY'));
+            $a = $this->chargeFor($charges, 'A');
+            $pay->handle($a, Money::of($a->amount, 'TRY'));
+            $pay->handle($this->chargeFor($charges, 'B'), Money::of(150_000, 'TRY'));
         });
 
         $rows = $this->inWorkspace($workspace, fn () => app(DebtorsReport::class)->handle($building));
@@ -378,9 +406,9 @@ final class BuildingsTest extends LedgerTestCase
         $this->assertSame(['C', 'B', 'D'], $rows->pluck('unit_no')->all());
 
         $expected = [
-            'C' => $charges['C']->amount,
-            'B' => $charges['B']->amount - 150_000,
-            'D' => $charges['D']->amount,
+            'C' => $this->chargeFor($charges, 'C')->amount,
+            'B' => $this->chargeFor($charges, 'B')->amount - 150_000,
+            'D' => $this->chargeFor($charges, 'D')->amount,
         ];
 
         foreach ($rows as $row) {
@@ -396,7 +424,10 @@ final class BuildingsTest extends LedgerTestCase
         $this->assertSame($sorted, $owed);
 
         $totals = $this->inWorkspace($workspace, fn () => app(DebtorsReport::class)->totals($building));
-        $this->assertSame(array_sum($expected), $totals['TRY']->minorUnits);
+
+        $owedInLira = $totals->get('TRY');
+        $this->assertNotNull($owedInLira, 'The lira debts must be totalled under their own currency.');
+        $this->assertSame(array_sum($expected), $owedInLira->minorUnits);
     }
 
     #[Test]
@@ -530,8 +561,8 @@ final class BuildingsTest extends LedgerTestCase
         [$workspace, $building] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
         $this->inWorkspace($workspace, fn () => $this->makeUnit($building, 'C1'));
 
-        $charge = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
-            ->handle($building, '2026-07', Money::of(100_000, 'TRY')))->first();
+        $charge = $this->onlyCharge($this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
+            ->handle($building, '2026-07', Money::of(100_000, 'TRY'))));
 
         try {
             $this->inWorkspace($workspace, fn () => app(RecordChargePayment::class)
@@ -633,8 +664,8 @@ final class BuildingsTest extends LedgerTestCase
         [$workspace, $building] = $this->makeBuilding(Building::FORMULA_FIXED, withFund: true);
         $this->inWorkspace($workspace, fn () => $this->makeUnit($building, 'V1'));
 
-        $charge = $this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
-            ->handle($building, '2026-07', Money::of(100_000, 'TRY')))->first();
+        $charge = $this->onlyCharge($this->inWorkspace($workspace, fn () => app(IssuePeriodicCharges::class)
+            ->handle($building, '2026-07', Money::of(100_000, 'TRY'))));
 
         $viewer = $this->makeUser('viewer@example.test');
         WorkspaceMember::query()->create([
@@ -672,7 +703,7 @@ final class BuildingsTest extends LedgerTestCase
         [, $buildingA] = $this->makeBuilding(Building::FORMULA_FIXED, email: 'owner-a@example.test');
         [$workspaceB] = $this->makeBuilding(Building::FORMULA_FIXED, email: 'owner-b@example.test');
 
-        $intruder = $workspaceB->owner;
+        $intruder = $workspaceB->owner()->firstOrFail();
 
         Sanctum::actingAs($intruder);
 
@@ -711,6 +742,35 @@ final class BuildingsTest extends LedgerTestCase
         ]));
 
         return [$workspace, $building, $fund];
+    }
+
+    /**
+     * The single charge an action just issued.
+     *
+     * Collection::first() is typed nullable for the empty case, which is never
+     * the case here: the test has already created the unit the charge is for.
+     *
+     * @param  Collection<array-key, BuildingCharge>  $charges
+     */
+    private function onlyCharge(Collection $charges): BuildingCharge
+    {
+        $charge = $charges->first();
+
+        $this->assertNotNull($charge, 'The period must have issued a charge.');
+
+        return $charge;
+    }
+
+    /**
+     * @param  Collection<string, BuildingCharge>  $charges  keyed by unit number
+     */
+    private function chargeFor(Collection $charges, string $key): BuildingCharge
+    {
+        $charge = $charges->get($key);
+
+        $this->assertNotNull($charge, "No charge was issued against {$key}.");
+
+        return $charge;
     }
 
     /** @param  array<string, mixed>  $attributes */

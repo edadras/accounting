@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Concerns;
 
 use Illuminate\Foundation\Application;
-use Illuminate\Support\ServiceProvider;
 use Modules\Documents\Providers\DocumentsServiceProvider;
 use Modules\Search\Providers\SearchServiceProvider;
 
@@ -18,7 +17,14 @@ use Modules\Search\Providers\SearchServiceProvider;
  */
 trait RegistersModuleProviders
 {
-    /** @var list<class-string<ServiceProvider>> */
+    /**
+     * The providers this trait brings with it, in the order they are booted.
+     *
+     * Deliberately left without a @var: a trait constant's PHPDoc is resolved
+     * in the namespace of the class using the trait rather than this file's, so
+     * any short class name in it would be read against the wrong namespace —
+     * and the literal class-strings below are the more precise type anyway.
+     */
     private const MODULE_PROVIDERS = [
         DocumentsServiceProvider::class,
         SearchServiceProvider::class,

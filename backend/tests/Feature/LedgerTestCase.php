@@ -32,7 +32,14 @@ abstract class LedgerTestCase extends TestCase
         );
     }
 
-    /** Runs $callback with $workspace active — mirrors what the middleware does. */
+    /**
+     * Runs $callback with $workspace active — mirrors what the middleware does.
+     *
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
     protected function inWorkspace(Workspace $workspace, callable $callback): mixed
     {
         return app(WorkspaceContext::class)->runFor($workspace, $callback);

@@ -328,9 +328,15 @@ final class SmsCaptureTest extends CaptureTestCase
         // transactions.source names sms; a payment read off a bank message
         // should say so rather than claim to have been typed in by hand.
         $this->assertSame('sms', $transaction->source);
-        $this->assertSame($messageId, $transaction->source_meta['capture_message_id']);
+
+        $meta = $transaction->source_meta;
+        $this->assertIsArray($meta);
+        $this->assertSame($messageId, $meta['capture_message_id']);
     }
 
+    /**
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function deliver(
         Workspace $workspace,
         string $body,

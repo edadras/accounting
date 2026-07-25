@@ -188,7 +188,7 @@ final class BudgetTest extends LedgerTestCase
         );
 
         $this->assertSame(170_00, $effective->minorUnits);
-        $this->assertSame(100_00, $budget->fresh()->amount, 'Rollover must not rewrite the stored amount.');
+        $this->assertSame(100_00, $budget->refresh()->amount, 'Rollover must not rewrite the stored amount.');
     }
 
     #[Test]
@@ -547,7 +547,7 @@ final class BudgetTest extends LedgerTestCase
     {
         app(WorkspaceContext::class)->forget();
 
-        Sanctum::actingAs($workspace->owner);
+        Sanctum::actingAs($workspace->owner()->firstOrFail());
 
         $response = $this->getJson(
             '/api/v1/budgets/status?at='.urlencode($at),

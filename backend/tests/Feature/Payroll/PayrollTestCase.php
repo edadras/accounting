@@ -79,7 +79,37 @@ abstract class PayrollTestCase extends LedgerTestCase
         return app(RegisterEmployee::class)->handle($payload);
     }
 
-    /** @param array<string, mixed> $overrides */
+    /**
+     * The payload CreatePayrollRun takes, with the parts every test would
+     * otherwise repeat already filled in.
+     *
+     * @param  array{
+     *   id?: string,
+     *   reference?: string|null,
+     *   period_start?: string,
+     *   period_end?: string,
+     *   pay_date?: string|null,
+     *   currency?: string|null,
+     *   account_id?: string,
+     *   category_id?: string|null,
+     *   employee_ids?: list<string>|null,
+     *   adjustments?: array<string, array{earnings?: list<array{code?: string, label?: string, amount: int}>, deductions?: list<array{code?: string, label?: string, amount: int}>}>,
+     *   notes?: string|null,
+     * }  $overrides
+     * @return array{
+     *   id?: string,
+     *   reference?: string|null,
+     *   period_start: string,
+     *   period_end: string,
+     *   pay_date?: string|null,
+     *   currency?: string|null,
+     *   account_id: string,
+     *   category_id?: string|null,
+     *   employee_ids?: list<string>|null,
+     *   adjustments?: array<string, array{earnings?: list<array{code?: string, label?: string, amount: int}>, deductions?: list<array{code?: string, label?: string, amount: int}>}>,
+     *   notes?: string|null,
+     * }
+     */
     protected function runPayload(Account $account, array $overrides = []): array
     {
         return array_merge([

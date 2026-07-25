@@ -6,7 +6,6 @@ namespace Tests\Feature\Concerns;
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
-use Illuminate\Support\ServiceProvider;
 use Modules\Family\Providers\FamilyServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
 
@@ -19,7 +18,14 @@ use Modules\Recurring\Providers\RecurringServiceProvider;
  */
 trait RegistersUnwiredProviders
 {
-    /** @var list<class-string<ServiceProvider>> */
+    /**
+     * The providers this trait brings with it, in the order they are booted.
+     *
+     * Deliberately left without a @var: a trait constant's PHPDoc is resolved
+     * in the namespace of the class using the trait rather than this file's, so
+     * any short class name in it would be read against the wrong namespace —
+     * and the literal class-strings below are the more precise type anyway.
+     */
     private const UNWIRED_PROVIDERS = [
         FamilyServiceProvider::class,
         RecurringServiceProvider::class,

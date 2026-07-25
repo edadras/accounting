@@ -50,7 +50,7 @@ final class TwoFactorTest extends SecurityTestCase
         $this->assertCount(8, $codes);
         $this->assertSame($codes, array_unique($codes));
 
-        $this->loginExpectingChallenge($user->fresh());
+        $this->loginExpectingChallenge($user->refresh());
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.two_factor_enabled']);
     }
@@ -102,7 +102,9 @@ final class TwoFactorTest extends SecurityTestCase
             ->first();
 
         $this->assertNotNull($failure, 'A failed second factor is exactly what a breach review looks for.');
-        $this->assertSame('login', $failure->after['stage']);
+        $after = $failure->after;
+        $this->assertIsArray($after);
+        $this->assertSame('login', $after['stage']);
 
         // And the challenge still has not become a token.
         $this->withToken('nonsense')->getJson('/api/v1/me')->assertUnauthorized();
@@ -121,7 +123,7 @@ final class TwoFactorTest extends SecurityTestCase
             'code' => $code,
         ])->assertOk();
 
-        $this->assertCount(7, $user->fresh()->recoveryCodes());
+        $this->assertCount(7, $user->refresh()->recoveryCodes());
 
         $second = $this->loginExpectingChallenge($user);
         $this->postJson('/api/v1/auth/2fa/verify', [
@@ -213,7 +215,7 @@ final class TwoFactorTest extends SecurityTestCase
         $user = $this->makeUser('sticky@example.test');
         $this->enrollInTwoFactor($user);
 
-        Sanctum::actingAs($user->fresh());
+        Sanctum::actingAs($user->refresh());
 
         $this->postJson('/api/v1/auth/2fa/disable')
             ->assertStatus(422)
@@ -223,11 +225,11 @@ final class TwoFactorTest extends SecurityTestCase
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'two_factor_confirmation_required');
 
-        $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
+        $this->assertTrue($user->refresh()->hasTwoFactorEnabled());
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.two_factor_failed']);
 
         // Still on: login answers with a challenge, not a token.
-        $this->loginExpectingChallenge($user->fresh());
+        $this->loginExpectingChallenge($user->refresh());
     }
 
     #[Test]
@@ -236,22 +238,22 @@ final class TwoFactorTest extends SecurityTestCase
         $withPassword = $this->makeUser('bypassword@example.test');
         $this->enrollInTwoFactor($withPassword);
 
-        Sanctum::actingAs($withPassword->fresh());
+        Sanctum::actingAs($withPassword->refresh());
         $this->postJson('/api/v1/auth/2fa/disable', ['password' => 'password123'])
             ->assertOk()
             ->assertJsonPath('data.two_factor_enabled', false);
 
-        $this->assertFalse($withPassword->fresh()->hasTwoFactorEnabled());
+        $this->assertFalse($withPassword->refresh()->hasTwoFactorEnabled());
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.two_factor_disabled']);
 
         $withCode = $this->makeUser('bycode@example.test');
         ['secret' => $secret] = $this->enrollInTwoFactor($withCode);
 
-        Sanctum::actingAs($withCode->fresh());
+        Sanctum::actingAs($withCode->refresh());
         $this->postJson('/api/v1/auth/2fa/disable', ['code' => $this->codeFor($secret)])
             ->assertOk();
 
-        $this->assertFalse($withCode->fresh()->hasTwoFactorEnabled());
+        $this->assertFalse($withCode->refresh()->hasTwoFactorEnabled());
 
         // And the password alone signs them in again.
         $this->postJson('/api/v1/auth/login', [
@@ -268,7 +270,7 @@ final class TwoFactorTest extends SecurityTestCase
 
         $challenge = $this->loginExpectingChallenge($user);
 
-        Sanctum::actingAs($user->fresh());
+        Sanctum::actingAs($user->refresh());
         $this->postJson('/api/v1/auth/2fa/disable', ['password' => 'password123'])->assertOk();
 
         $this->postJson('/api/v1/auth/2fa/verify', [

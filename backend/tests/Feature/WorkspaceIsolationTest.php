@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Modules\Core\Models\Workspace;
 use Modules\Core\Support\WorkspaceContext;
 use Modules\Ledger\Actions\RecordTransaction;
 use Modules\Ledger\Models\Account;
@@ -160,6 +162,8 @@ final class WorkspaceIsolationTest extends LedgerTestCase
     /**
      * Builds two unrelated worlds and returns
      * [intruder, victimWorkspace, victimTransaction, intruderWorkspace, victimAccount].
+     *
+     * @return array{User, Workspace, Transaction, Workspace, Account}
      */
     private function twoWorlds(): array
     {

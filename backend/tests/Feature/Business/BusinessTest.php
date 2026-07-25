@@ -194,7 +194,7 @@ final class BusinessTest extends LedgerTestCase
         ]));
 
         $this->inWorkspace($workspace, function () use ($invoice): void {
-            $stored = Invoice::query()->with('items')->findOrFail($invoice->id);
+            $stored = Invoice::query()->with('items')->whereKey($invoice->id)->firstOrFail();
 
             $this->assertSame(
                 (int) $stored->items->sum('line_total'),
@@ -307,7 +307,7 @@ final class BusinessTest extends LedgerTestCase
         ]));
 
         $this->inWorkspace($workspace, function () use ($invoice): void {
-            $fresh = Invoice::query()->findOrFail($invoice->id);
+            $fresh = Invoice::query()->whereKey($invoice->id)->firstOrFail();
 
             $this->assertSame(Invoice::STATUS_PARTIAL, $fresh->status);
             $this->assertSame(30000, $fresh->paid()->minorUnits);
@@ -330,7 +330,7 @@ final class BusinessTest extends LedgerTestCase
         });
 
         $this->inWorkspace($workspace, function () use ($invoice): void {
-            $fresh = Invoice::query()->findOrFail($invoice->id);
+            $fresh = Invoice::query()->whereKey($invoice->id)->firstOrFail();
 
             $this->assertSame(Invoice::STATUS_PAID, $fresh->status);
             $this->assertSame(100000, $fresh->paid()->minorUnits);
@@ -362,7 +362,7 @@ final class BusinessTest extends LedgerTestCase
         }
 
         $this->inWorkspace($workspace, function () use ($invoice): void {
-            $fresh = Invoice::query()->findOrFail($invoice->id);
+            $fresh = Invoice::query()->whereKey($invoice->id)->firstOrFail();
 
             $this->assertSame(Invoice::STATUS_PARTIAL, $fresh->status);
             $this->assertSame(60000, $fresh->paid()->minorUnits, 'The refused payment must not have been recorded.');
@@ -405,16 +405,16 @@ final class BusinessTest extends LedgerTestCase
         $this->inWorkspace($workspace, function () use ($payment, $invoice): void {
             $this->assertSame(1, Transaction::query()->count(), 'A payment must post one transaction, no more.');
 
-            $transaction = Transaction::query()->with('entries')->findOrFail($payment->transaction_id);
+            $transaction = Transaction::query()->with('entries')->whereKey($payment->transaction_id)->firstOrFail();
 
             $this->assertSame(Transaction::TYPE_INCOME, $transaction->type);
             $this->assertSame(120000, $transaction->amount);
             $this->assertSame($invoice->number, $transaction->reference);
             $this->assertCount(1, $transaction->entries);
-            $this->assertSame('debit', $transaction->entries->first()->direction);
+            $this->assertSame('debit', $transaction->entries->firstOrFail()->direction);
         });
 
-        $this->assertSame(620000, $account->fresh()->current_balance);
+        $this->assertSame(620000, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -430,13 +430,13 @@ final class BusinessTest extends LedgerTestCase
         ]));
 
         $this->inWorkspace($workspace, function () use ($payment): void {
-            $transaction = Transaction::query()->with('entries')->findOrFail($payment->transaction_id);
+            $transaction = Transaction::query()->with('entries')->whereKey($payment->transaction_id)->firstOrFail();
 
             $this->assertSame(Transaction::TYPE_EXPENSE, $transaction->type);
-            $this->assertSame('credit', $transaction->entries->first()->direction);
+            $this->assertSame('credit', $transaction->entries->firstOrFail()->direction);
         });
 
-        $this->assertSame(380000, $account->fresh()->current_balance);
+        $this->assertSame(380000, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -459,7 +459,7 @@ final class BusinessTest extends LedgerTestCase
         });
 
         $this->assertSame($first->id, $second->id);
-        $this->assertSame(80000, $account->fresh()->current_balance);
+        $this->assertSame(80000, $account->refresh()->current_balance);
         $this->assertSame(1, $this->inWorkspace($workspace, fn () => Payment::query()->count()));
     }
 
@@ -672,7 +672,7 @@ final class BusinessTest extends LedgerTestCase
         ], $headers)->assertCreated()
             ->assertJsonPath('meta.invoice.status', 'paid');
 
-        $this->assertSame(108999, $account->fresh()->current_balance);
+        $this->assertSame(108999, $account->refresh()->current_balance);
     }
 
     #[Test]

@@ -86,6 +86,6 @@ final class BroadcastChannelTest extends LedgerTestCase
 
         $membership->delete();
 
-        $this->assertFalse($this->authorizes($member->fresh(), $workspace->id));
+        $this->assertFalse($this->authorizes($member->refresh(), $workspace->id));
     }
 }

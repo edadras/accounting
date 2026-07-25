@@ -82,7 +82,7 @@ final class ParseTransactionTextTest extends AiTestCase
         // A workspace that already keeps its books in toman-as-rial.
         $workspace->forceFill(['settings' => ['ai' => ['toman_rial_factor' => 1]]])->save();
 
-        $draft = $this->parse($workspace->fresh(), 'امروز ۳۵۰ هزار تومان خرج کردم');
+        $draft = $this->parse($workspace->refresh(), 'امروز ۳۵۰ هزار تومان خرج کردم');
 
         $this->assertSame(350_000, $draft->amount);
         $this->assertContains('toman_converted_at_1', $draft->warnings);

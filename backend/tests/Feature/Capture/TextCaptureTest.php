@@ -63,11 +63,16 @@ final class TextCaptureTest extends CaptureTestCase
         $this->assertSame(35000, $transaction->amount);
         $this->assertSame(Transaction::TYPE_EXPENSE, $transaction->type);
         $this->assertSame('شام', $transaction->description);
-        $this->assertSame($messageId, $transaction->source_meta['capture_message_id']);
+        $meta = $transaction->source_meta;
+        $this->assertIsArray($meta);
+        $this->assertSame($messageId, $meta['capture_message_id']);
 
-        $message = $this->inWorkspace($workspace, fn () => CaptureMessage::query()->findOrFail($messageId));
+        $message = $this->inWorkspace($workspace, fn () => CaptureMessage::query()->findOrFail((string) $messageId));
         $this->assertSame($transaction->id, $message->transaction_id);
-        $this->assertSame(AiDraft::STATUS_CONFIRMED, $message->draft->status);
+
+        $draft = $message->draft;
+        $this->assertNotNull($draft);
+        $this->assertSame(AiDraft::STATUS_CONFIRMED, $draft->status);
     }
 
     #[Test]

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\PendingCommand;
 use League\Csv\Reader;
 use Modules\Core\Models\Workspace;
 use Modules\Core\Models\WorkspaceMember;
@@ -113,6 +114,21 @@ abstract class DataOpsTestCase extends LedgerTestCase
         $reader = Reader::createFromString($csv);
         $reader->setHeaderOffset(0);
 
-        return array_values(iterator_to_array($reader->getRecords(), false));
+        return iterator_to_array($reader->getRecords(), false);
+    }
+
+    /**
+     * `artisan()` hands back a bare exit code instead of a command when console
+     * output is not mocked. These tests always drive the mocked command, so the
+     * distinction is settled once here rather than at every call site.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    protected function runArtisan(string $command, array $parameters = []): PendingCommand
+    {
+        $pending = $this->artisan($command, $parameters);
+        $this->assertInstanceOf(PendingCommand::class, $pending);
+
+        return $pending;
     }
 }

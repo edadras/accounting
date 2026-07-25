@@ -55,9 +55,12 @@ final class DraftApiTest extends AiTestCase
 
         $this->assertSame(35000, $transaction->amount);
         $this->assertSame('شام', $transaction->description);
-        $this->assertSame($draftId, $transaction->source_meta['ai_draft_id']);
 
-        $draft = $this->inWorkspace($workspace, fn () => AiDraft::query()->findOrFail($draftId));
+        $meta = $transaction->source_meta;
+        $this->assertIsArray($meta);
+        $this->assertSame($draftId, $meta['ai_draft_id']);
+
+        $draft = $this->inWorkspace($workspace, fn () => AiDraft::query()->findOrFail((string) $draftId));
         $this->assertSame(AiDraft::STATUS_CONFIRMED, $draft->status);
         $this->assertSame($transaction->id, $draft->transaction_id);
     }

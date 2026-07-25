@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Search;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\PendingCommand;
 use Modules\AI\Models\Embedding;
 use Modules\Core\Models\Workspace;
 use Modules\Documents\Models\Document;
@@ -40,7 +41,7 @@ final class EmbedCommandTest extends LedgerTestCase
         $this->forgetTheVectors();
         $this->assertSame(0, $this->vectorCount());
 
-        $this->artisan('search:embed')->assertSuccessful();
+        $this->command('search:embed')->assertSuccessful();
 
         $this->assertNotNull($this->vectorFor($transaction));
         $this->assertNotNull($this->vectorFor($document));
@@ -56,13 +57,13 @@ final class EmbedCommandTest extends LedgerTestCase
 
         $this->forgetTheVectors();
 
-        $this->artisan('search:embed', ['--type' => 'transactions'])
+        $this->command('search:embed', ['--type' => 'transactions'])
             ->expectsOutputToContain('Embedded 2 record(s)')
             ->assertSuccessful();
 
         $after = $this->vectorSnapshot();
 
-        $this->artisan('search:embed', ['--type' => 'transactions'])
+        $this->command('search:embed', ['--type' => 'transactions'])
             ->expectsOutputToContain('Embedded 0 record(s)')
             ->assertSuccessful();
 
@@ -84,7 +85,7 @@ final class EmbedCommandTest extends LedgerTestCase
 
         $this->assertSame(1, $this->vectorCount(Transaction::class));
 
-        $this->artisan('search:embed', ['--type' => 'transactions'])
+        $this->command('search:embed', ['--type' => 'transactions'])
             ->expectsOutputToContain('Embedded 1 record(s)')
             ->assertSuccessful();
 
@@ -102,7 +103,7 @@ final class EmbedCommandTest extends LedgerTestCase
 
         $transaction = $this->transaction($workspace, 'بنزین');
 
-        $this->artisan('search:embed', ['--type' => 'transactions', '--force' => true])
+        $this->command('search:embed', ['--type' => 'transactions', '--force' => true])
             ->expectsOutputToContain('Embedded 1 record(s)')
             ->assertSuccessful();
 
@@ -121,7 +122,7 @@ final class EmbedCommandTest extends LedgerTestCase
 
         $this->forgetTheVectors();
 
-        $this->artisan('search:embed', ['--workspace' => $mine->id])->assertSuccessful();
+        $this->command('search:embed', ['--workspace' => $mine->id])->assertSuccessful();
 
         $this->assertNotNull($this->vectorFor($ours));
         $this->assertNull($this->vectorFor($others));
@@ -137,7 +138,7 @@ final class EmbedCommandTest extends LedgerTestCase
 
         $this->forgetTheVectors();
 
-        $this->artisan('search:embed', ['--type' => 'documents'])->assertSuccessful();
+        $this->command('search:embed', ['--type' => 'documents'])->assertSuccessful();
 
         $this->assertNull($this->vectorFor($transaction));
         $this->assertNotNull($this->vectorFor($document));
@@ -146,7 +147,7 @@ final class EmbedCommandTest extends LedgerTestCase
     #[Test]
     public function an_unknown_type_is_refused_rather_than_silently_skipped(): void
     {
-        $this->artisan('search:embed', ['--type' => 'invoices'])
+        $this->command('search:embed', ['--type' => 'invoices'])
             ->expectsOutputToContain('Unknown search type(s): invoices')
             ->assertFailed();
     }
@@ -154,9 +155,24 @@ final class EmbedCommandTest extends LedgerTestCase
     #[Test]
     public function an_unknown_workspace_is_refused(): void
     {
-        $this->artisan('search:embed', ['--workspace' => '01JQZZZZZZZZZZZZZZZZZZZZZZ'])
+        $this->command('search:embed', ['--workspace' => '01JQZZZZZZZZZZZZZZZZZZZZZZ'])
             ->expectsOutputToContain('does not exist')
             ->assertFailed();
+    }
+
+    /**
+     * artisan() hands back a bare exit code once console output is no longer
+     * mocked, and only the PendingCommand carries the assertions.
+     *
+     * @param  array<string, bool|string>  $parameters
+     */
+    private function command(string $command, array $parameters = []): PendingCommand
+    {
+        $pending = $this->artisan($command, $parameters);
+
+        $this->assertInstanceOf(PendingCommand::class, $pending);
+
+        return $pending;
     }
 
     private function world(string $email): Workspace

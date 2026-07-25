@@ -281,7 +281,7 @@ final class SemanticSearchTest extends LedgerTestCase
 
         Sanctum::actingAs($user);
 
-        $response = $this->semantic($workspace->fresh(), self::CAR_QUERY, ['types' => 'transactions']);
+        $response = $this->semantic($workspace->refresh(), self::CAR_QUERY, ['types' => 'transactions']);
 
         $response->assertOk();
 
@@ -327,7 +327,10 @@ final class SemanticSearchTest extends LedgerTestCase
         });
     }
 
-    /** @param array<string, string|int> $extra */
+    /**
+     * @param array<string, string|int> $extra
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function semantic(Workspace $workspace, string $query, array $extra = []): TestResponse
     {
         $parameters = http_build_query(['q' => $query] + $extra);

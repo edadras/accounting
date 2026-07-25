@@ -38,8 +38,11 @@ final class DoubleEntryTest extends LedgerTestCase
 
         $this->assertSame('expense', $transaction->type);
         $this->assertCount(1, $transaction->entries);
-        $this->assertSame(Entry::CREDIT, $transaction->entries->first()->direction);
-        $this->assertSame(65000, $account->fresh()->current_balance);
+
+        $entry = $transaction->entries->first();
+        $this->assertNotNull($entry);
+        $this->assertSame(Entry::CREDIT, $entry->direction);
+        $this->assertSame(65000, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -56,7 +59,7 @@ final class DoubleEntryTest extends LedgerTestCase
             'currency' => 'TRY',
         ]));
 
-        $this->assertSame(500000, $account->fresh()->current_balance);
+        $this->assertSame(500000, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -75,8 +78,8 @@ final class DoubleEntryTest extends LedgerTestCase
             'currency' => 'TRY',
         ]));
 
-        $this->assertSame(150000, $from->fresh()->current_balance);
-        $this->assertSame(50000, $to->fresh()->current_balance);
+        $this->assertSame(150000, $from->refresh()->current_balance);
+        $this->assertSame(50000, $to->refresh()->current_balance);
 
         $net = $transaction->entries->sum(fn (Entry $entry) => $entry->signedBaseAmount());
         $this->assertSame(0, $net, 'A same-currency transfer must net to zero in base currency.');
@@ -100,13 +103,19 @@ final class DoubleEntryTest extends LedgerTestCase
 
         $entries = $transaction->entries->keyBy('account_id');
 
-        $this->assertSame('TRY', $entries[$lira->id]->currency);
-        $this->assertSame('USD', $entries[$dollars->id]->currency);
+        $liraEntry = $entries->get($lira->id);
+        $dollarEntry = $entries->get($dollars->id);
+
+        $this->assertNotNull($liraEntry, 'The lira side of the transfer must have been posted.');
+        $this->assertNotNull($dollarEntry, 'The dollar side of the transfer must have been posted.');
+
+        $this->assertSame('TRY', $liraEntry->currency);
+        $this->assertSame('USD', $dollarEntry->currency);
 
         // ₺1,000 at the seeded 0.031 rate is $31.00 = 3100 minor units.
-        $this->assertSame(3100, $entries[$dollars->id]->amount);
-        $this->assertSame(900000, $lira->fresh()->current_balance);
-        $this->assertSame(3100, $dollars->fresh()->current_balance);
+        $this->assertSame(3100, $dollarEntry->amount);
+        $this->assertSame(900000, $lira->refresh()->current_balance);
+        $this->assertSame(3100, $dollars->refresh()->current_balance);
     }
 
     #[Test]
@@ -163,8 +172,8 @@ final class DoubleEntryTest extends LedgerTestCase
 
             // Invariant 3: the cached balance still equals the entries behind it.
             foreach ([$wallet, $bank] as $account) {
-                $cached = $account->fresh()->current_balance;
-                $recomputed = $account->fresh()->recalculateBalance()->minorUnits;
+                $cached = $account->refresh()->current_balance;
+                $recomputed = $account->refresh()->recalculateBalance()->minorUnits;
 
                 $this->assertSame($cached, $recomputed, "Cached balance drifted on {$account->name}.");
             }
@@ -269,6 +278,6 @@ final class DoubleEntryTest extends LedgerTestCase
 
         $this->assertSame($first->id, $second->id);
         $this->assertSame(1, $this->inWorkspace($workspace, fn () => Transaction::query()->count()));
-        $this->assertSame(75000, $account->fresh()->current_balance);
+        $this->assertSame(75000, $account->refresh()->current_balance);
     }
 }

@@ -50,7 +50,9 @@ final class AssetTest extends LedgerTestCase
 
         $this->assertSame(900_000, $total);
         $this->assertSame(900_000, $asset->depreciableBase()->minorUnits);
-        $this->assertSame(100_000, end($schedule)['closing']->minorUnits);
+        $last = end($schedule);
+        $this->assertNotFalse($last);
+        $this->assertSame(100_000, $last['closing']->minorUnits);
 
         // The remainder is spread one minor unit at a time, never dropped.
         $charges = array_map(static fn (array $row): int => $row['depreciation']->minorUnits, $schedule);
@@ -117,7 +119,9 @@ final class AssetTest extends LedgerTestCase
         }
 
         $this->assertSame(700_000, array_sum($charges));
-        $this->assertSame(300_000, end($schedule)['closing']->minorUnits);
+        $last = end($schedule);
+        $this->assertNotFalse($last);
+        $this->assertSame(300_000, $last['closing']->minorUnits);
     }
 
     #[Test]
@@ -141,7 +145,9 @@ final class AssetTest extends LedgerTestCase
         // writes off whatever is left.
         $this->assertSame([300_000, 210_000, 147_000, 343_000], $charges);
         $this->assertSame(1_000_000, array_sum($charges));
-        $this->assertSame(0, end($schedule)['closing']->minorUnits);
+        $last = end($schedule);
+        $this->assertNotFalse($last);
+        $this->assertSame(0, $last['closing']->minorUnits);
     }
 
     #[Test]
@@ -165,7 +171,9 @@ final class AssetTest extends LedgerTestCase
         ));
 
         $this->assertSame(777_777 - 12_345, $total);
-        $this->assertSame(12_345, end($schedule)['closing']->minorUnits);
+        $last = end($schedule);
+        $this->assertNotFalse($last);
+        $this->assertSame(12_345, $last['closing']->minorUnits);
 
         foreach ($schedule as $row) {
             $this->assertGreaterThanOrEqual(12_345, $row['closing']->minorUnits);

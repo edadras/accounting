@@ -141,6 +141,9 @@ final class QrCaptureTest extends CaptureTestCase
         $this->assertSame(1, $this->inWorkspace($workspace, fn () => AiDraft::query()->count()));
     }
 
+    /**
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function scan(Workspace $workspace, string $payload): TestResponse
     {
         return $this->postJson('/api/v1/capture/qr', ['payload' => $payload], $this->headers($workspace));

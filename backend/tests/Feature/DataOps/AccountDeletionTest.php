@@ -47,7 +47,7 @@ final class AccountDeletionTest extends DataOpsTestCase
         // The account still exists — nothing has been erased yet.
         $this->assertDatabaseHas('users', ['id' => $user->id]);
 
-        Sanctum::actingAs($user->fresh());
+        Sanctum::actingAs($user->refresh());
 
         $this->postJson('/api/v1/me/restore')
             ->assertOk()
@@ -75,13 +75,13 @@ final class AccountDeletionTest extends DataOpsTestCase
             ->assertForbidden()
             ->assertJsonPath('error.code', 'incorrect_password');
 
-        $this->assertNull($user->fresh()->deletion_requested_at);
+        $this->assertNull($user->refresh()->deletion_requested_at);
 
         $this->deleteJson('/api/v1/me', [])
             ->assertStatus(422)
             ->assertJsonValidationErrors('password');
 
-        $this->assertNull($user->fresh()->deletion_requested_at);
+        $this->assertNull($user->refresh()->deletion_requested_at);
     }
 
     #[Test]
@@ -105,7 +105,7 @@ final class AccountDeletionTest extends DataOpsTestCase
         $this->schedule($due, daysAgo: 31, purgeAfterDaysFromNow: -1);
         $this->schedule($waiting, daysAgo: 1, purgeAfterDaysFromNow: 29);
 
-        $this->artisan('accounts:purge')->assertExitCode(0);
+        $this->runArtisan('accounts:purge')->assertExitCode(0);
 
         $this->assertDatabaseMissing('users', ['id' => $due->id]);
         $this->assertDatabaseHas('users', ['id' => $waiting->id]);
@@ -126,7 +126,7 @@ final class AccountDeletionTest extends DataOpsTestCase
 
         $this->schedule($owner, daysAgo: 31, purgeAfterDaysFromNow: -1);
 
-        $this->artisan('accounts:purge')->assertExitCode(0);
+        $this->runArtisan('accounts:purge')->assertExitCode(0);
 
         $this->assertDatabaseMissing('users', ['id' => $owner->id]);
 
@@ -159,7 +159,7 @@ final class AccountDeletionTest extends DataOpsTestCase
 
         $this->schedule($owner, daysAgo: 31, purgeAfterDaysFromNow: -1);
 
-        $this->artisan('accounts:purge')->assertExitCode(0);
+        $this->runArtisan('accounts:purge')->assertExitCode(0);
 
         foreach (['accounts', 'categories', 'transactions', 'entries', 'workspace_members'] as $table) {
             $this->assertDatabaseMissing($table, ['workspace_id' => $workspace->id]);
@@ -172,7 +172,7 @@ final class AccountDeletionTest extends DataOpsTestCase
         $due = $this->makeUser('due@example.test');
         $this->schedule($due, daysAgo: 31, purgeAfterDaysFromNow: -1);
 
-        $this->artisan('accounts:purge', ['--dry-run' => true])->assertExitCode(0);
+        $this->runArtisan('accounts:purge', ['--dry-run' => true])->assertExitCode(0);
 
         $this->assertDatabaseHas('users', ['id' => $due->id]);
     }

@@ -120,16 +120,20 @@ final class BankingTest extends LedgerTestCase
                 $rows = app(GenerateAmortizationSchedule::class)->rows($loan);
 
                 $previous = $principal;
+                $last = null;
 
                 foreach ($rows as $row) {
                     $this->assertLessThanOrEqual($previous, $row['closing_balance'], 'Balance went up.');
                     $this->assertGreaterThanOrEqual(0, $row['closing_balance'], 'Balance went negative.');
                     $previous = $row['closing_balance'];
+                    $last = $row;
                 }
+
+                $this->assertNotNull($last, "Annuity {$principal}/{$count} @ {$rate}% produced no rows.");
 
                 $this->assertSame(
                     0,
-                    $rows[array_key_last($rows)]['closing_balance'],
+                    $last['closing_balance'],
                     "Annuity {$principal}/{$count} @ {$rate}% did not close at zero.",
                 );
             }
@@ -150,7 +154,7 @@ final class BankingTest extends LedgerTestCase
 
             $this->assertSame(14400, (int) $installments->sum(fn (LoanInstallment $r) => $r->interest_part));
             $this->assertSame(120000, (int) $installments->sum(fn (LoanInstallment $r) => $r->principal_part));
-            $this->assertSame(120000, $loan->fresh()->outstanding_balance);
+            $this->assertSame(120000, $loan->refresh()->outstanding_balance);
         });
     }
 
@@ -208,8 +212,8 @@ final class BankingTest extends LedgerTestCase
             $this->assertSame(Check::STATUS_CLEARED, $check->status);
             $this->assertNotNull($check->transaction_id);
             $this->assertSame(1, Transaction::query()->count());
-            $this->assertSame('income', Transaction::query()->first()->type);
-            $this->assertSame(145000, $account->fresh()->current_balance);
+            $this->assertSame('income', Transaction::query()->firstOrFail()->type);
+            $this->assertSame(145000, $account->refresh()->current_balance);
         });
     }
 
@@ -226,8 +230,8 @@ final class BankingTest extends LedgerTestCase
             app(ClearCheck::class)->handle($check);
 
             $this->assertSame(1, Transaction::query()->count());
-            $this->assertSame('expense', Transaction::query()->first()->type);
-            $this->assertSame(55000, $account->fresh()->current_balance);
+            $this->assertSame('expense', Transaction::query()->firstOrFail()->type);
+            $this->assertSame(55000, $account->refresh()->current_balance);
         });
     }
 
@@ -247,7 +251,7 @@ final class BankingTest extends LedgerTestCase
 
             $this->assertSame($first->transaction_id, $second->transaction_id);
             $this->assertSame(1, Transaction::query()->count(), 'Clearing twice posted twice.');
-            $this->assertSame(145000, $account->fresh()->current_balance);
+            $this->assertSame(145000, $account->refresh()->current_balance);
         });
     }
 
@@ -269,8 +273,8 @@ final class BankingTest extends LedgerTestCase
             }
 
             $this->assertSame(0, Transaction::query()->count());
-            $this->assertNull($check->fresh()->transaction_id);
-            $this->assertSame(100000, $account->fresh()->current_balance);
+            $this->assertNull($check->refresh()->transaction_id);
+            $this->assertSame(100000, $account->refresh()->current_balance);
         });
     }
 
@@ -303,7 +307,7 @@ final class BankingTest extends LedgerTestCase
             $loan = $this->makeLoan($account, 120000, 12, '0', Loan::INTEREST_SIMPLE);
             app(GenerateAmortizationSchedule::class)->handle($loan);
 
-            $first = $loan->installments()->first();
+            $first = $loan->installments()->firstOrFail();
             $this->assertSame(10000, $first->total_amount);
 
             $first = app(PayInstallment::class)->handle($first, 4000);
@@ -313,8 +317,8 @@ final class BankingTest extends LedgerTestCase
             $this->assertSame(6000, $first->remaining());
             $this->assertNull($first->paid_at);
 
-            $this->assertSame(116000, $loan->fresh()->outstanding_balance);
-            $this->assertSame(996000, $account->fresh()->current_balance);
+            $this->assertSame(116000, $loan->refresh()->outstanding_balance);
+            $this->assertSame(996000, $account->refresh()->current_balance);
             $this->assertSame(1, Transaction::query()->count());
         });
     }
@@ -331,7 +335,7 @@ final class BankingTest extends LedgerTestCase
             app(GenerateAmortizationSchedule::class)->handle($loan);
 
             $pay = app(PayInstallment::class);
-            $first = $loan->installments()->first();
+            $first = $loan->installments()->firstOrFail();
 
             $first = $pay->handle($first, 4000);
             $first = $pay->handle($first, 6000);
@@ -339,7 +343,7 @@ final class BankingTest extends LedgerTestCase
             $this->assertSame(LoanInstallment::STATUS_PAID, $first->status);
             $this->assertSame(0, $first->remaining());
             $this->assertNotNull($first->paid_at);
-            $this->assertSame(110000, $loan->fresh()->outstanding_balance);
+            $this->assertSame(110000, $loan->refresh()->outstanding_balance);
             $this->assertSame(2, Transaction::query()->count());
         });
     }
@@ -355,7 +359,7 @@ final class BankingTest extends LedgerTestCase
             $loan = $this->makeLoan($account, 999999, 13, '23.75', Loan::INTEREST_COMPOUND);
             app(GenerateAmortizationSchedule::class)->handle($loan);
 
-            $first = $loan->installments()->first();
+            $first = $loan->installments()->firstOrFail();
             $part = intdiv($first->total_amount, 2);
 
             $paid = app(PayInstallment::class)->handle($first, $part);
@@ -365,7 +369,7 @@ final class BankingTest extends LedgerTestCase
             $this->assertSame(LoanInstallment::STATUS_PARTIAL, $paid->status);
             $this->assertGreaterThan(0, $principalPaid);
             $this->assertLessThanOrEqual($paid->principal_part, $principalPaid);
-            $this->assertSame(999999 - $principalPaid, $loan->fresh()->outstanding_balance);
+            $this->assertSame(999999 - $principalPaid, $loan->refresh()->outstanding_balance);
         });
     }
 
@@ -406,14 +410,14 @@ final class BankingTest extends LedgerTestCase
             app(GenerateAmortizationSchedule::class)->handle($loan);
 
             try {
-                app(PayInstallment::class)->handle($loan->installments()->first(), 10001);
+                app(PayInstallment::class)->handle($loan->installments()->firstOrFail(), 10001);
                 $this->fail('Overpaying an instalment must be refused.');
             } catch (BankingException $e) {
                 $this->assertSame('installment_overpayment', $e->errorCode);
             }
 
             $this->assertSame(0, Transaction::query()->count());
-            $this->assertSame(120000, $loan->fresh()->outstanding_balance);
+            $this->assertSame(120000, $loan->refresh()->outstanding_balance);
         });
     }
 

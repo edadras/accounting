@@ -271,7 +271,7 @@ final class InvestmentPerformanceToolTest extends AiTestCase
         });
     }
 
-    /** @param array<string, mixed> $data */
+    /** @param array{action: string, quantity: string, price: int} $data */
     private function trade(Workspace $workspace, Investment $investment, array $data): InvestmentTransaction
     {
         return $this->inWorkspace($workspace, fn () => app(RecordInvestmentTrade::class)->handle(

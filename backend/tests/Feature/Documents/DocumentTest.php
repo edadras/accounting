@@ -154,8 +154,11 @@ final class DocumentTest extends LedgerTestCase
         );
 
         $this->assertCount(1, $documents);
-        $this->assertSame($document->id, $documents->first()->id);
-        $this->assertSame('contract.pdf', $documents->first()->original_name);
+
+        $attached = $documents->first();
+        $this->assertNotNull($attached);
+        $this->assertSame($document->id, $attached->id);
+        $this->assertSame('contract.pdf', $attached->original_name);
     }
 
     #[Test]
@@ -363,7 +366,7 @@ final class DocumentTest extends LedgerTestCase
 
         return $this->inWorkspace(
             $workspace,
-            fn () => Document::query()->findOrFail($response->json('data.id')),
+            fn () => Document::query()->findOrFail((string) $response->json('data.id')),
         );
     }
 }

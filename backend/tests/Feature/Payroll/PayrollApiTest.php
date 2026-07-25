@@ -237,7 +237,7 @@ final class PayrollApiTest extends PayrollTestCase
         $this->assertSame($employeeId, $created->json('data.payslips.0.employee_id'));
 
         // A draft has cost nothing yet.
-        $this->assertSame(5_000_000, $account->fresh()?->current_balance);
+        $this->assertSame(5_000_000, $account->refresh()->current_balance);
 
         $this->getJson("/api/v1/payroll/runs/{$runId}", $headers)
             ->assertOk()
@@ -254,7 +254,7 @@ final class PayrollApiTest extends PayrollTestCase
             ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.is_posted', true);
 
-        $this->assertSame(5_000_000 - 1_388_888, $account->fresh()?->current_balance);
+        $this->assertSame(5_000_000 - 1_388_888, $account->refresh()->current_balance);
 
         // The retry a dropped connection produces.
         $this->postJson("/api/v1/payroll/runs/{$runId}/approve", [], $headers)
@@ -263,7 +263,7 @@ final class PayrollApiTest extends PayrollTestCase
 
         $this->assertSame(
             5_000_000 - 1_388_888,
-            $account->fresh()?->current_balance,
+            $account->refresh()->current_balance,
             'Approving twice must not have posted twice.',
         );
 

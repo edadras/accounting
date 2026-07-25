@@ -46,7 +46,7 @@ final class MembershipTest extends LedgerTestCase
             ->assertJsonPath('data.workspace_id', $workspace->id)
             ->assertJsonPath('data.role', 'member');
 
-        $this->assertTrue($guest->fresh()->isMemberOf($workspace));
+        $this->assertTrue($guest->refresh()->isMemberOf($workspace));
 
         // And the newly joined member can now actually reach the books.
         $this->getJson('/api/v1/transactions', ['X-Workspace-Id' => $workspace->id])
@@ -94,7 +94,7 @@ final class MembershipTest extends LedgerTestCase
             ->assertForbidden()
             ->assertJsonPath('error.code', 'invitation_email_mismatch');
 
-        $this->assertFalse($interceptor->fresh()->isMemberOf($workspace));
+        $this->assertFalse($interceptor->refresh()->isMemberOf($workspace));
     }
 
     #[Test]
@@ -128,8 +128,11 @@ final class MembershipTest extends LedgerTestCase
             'role' => 'member',
         ], ['X-Workspace-Id' => $workspace->id]);
 
+        $secondId = $second->json('data.id');
+        $this->assertIsString($secondId);
+
         WorkspaceInvitation::query()
-            ->findOrFail($second->json('data.id'))
+            ->findOrFail($secondId)
             ->forceFill(['expires_at' => now()->subDay()])
             ->save();
 
@@ -137,7 +140,7 @@ final class MembershipTest extends LedgerTestCase
         $this->postJson("/api/v1/invitations/{$second->json('data.token')}/accept")
             ->assertNotFound();
 
-        $this->assertFalse($guest->fresh()->isMemberOf($workspace));
+        $this->assertFalse($guest->refresh()->isMemberOf($workspace));
     }
 
     #[Test]
@@ -231,7 +234,7 @@ final class MembershipTest extends LedgerTestCase
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'cannot_remove_owner');
 
-        $this->assertSame('owner', $ownerMember->fresh()->role);
+        $this->assertSame('owner', $ownerMember->refresh()->role);
     }
 
     #[Test]
@@ -318,6 +321,7 @@ final class MembershipTest extends LedgerTestCase
             'X-Workspace-Id' => $intruderWorkspace->id,
         ])->assertNotFound();
 
-        $this->assertNull(WorkspaceInvitation::query()->find($invitationId)->revoked_at);
+        $this->assertIsString($invitationId);
+        $this->assertNull(WorkspaceInvitation::query()->findOrFail($invitationId)->revoked_at);
     }
 }

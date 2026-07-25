@@ -333,7 +333,10 @@ final class SearchTest extends LedgerTestCase
         ]));
     }
 
-    /** @param  array<string, string|int>  $extra */
+    /**
+     * @param  array<string, string|int>  $extra
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function search(Workspace $workspace, string $query, array $extra = []): TestResponse
     {
         $parameters = http_build_query(['q' => $query] + $extra);

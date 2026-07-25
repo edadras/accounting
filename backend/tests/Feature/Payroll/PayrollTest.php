@@ -121,7 +121,7 @@ final class PayrollTest extends PayrollTestCase
         $workspace = $this->payrollWorkspace('adjust@example.test');
         $account = $this->makeAccount($workspace, 'Bank', 'TRY', 5_000_000);
 
-        [$plain, $adjusted] = $this->inWorkspace($workspace, function () use ($account): array {
+        [$plain, $adjusted] = $this->inWorkspace($workspace, function (): array {
             $employee = $this->hire('Ada Yılmaz', amount: 1234567);
 
             $calculate = app(CalculatePayslip::class);

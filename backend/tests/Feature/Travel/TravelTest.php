@@ -643,7 +643,22 @@ final class TravelTest extends LedgerTestCase
         });
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * @param  array{
+     *   id?: string,
+     *   payer_member_id: string,
+     *   amount: int,
+     *   currency?: string|null,
+     *   fx_rate?: float|string|null,
+     *   category_id?: string|null,
+     *   occurred_at?: \DateTimeInterface|string|null,
+     *   description?: string|null,
+     *   latitude?: float|null,
+     *   longitude?: float|null,
+     *   mode?: string,
+     *   participants?: list<array{member_id: string, percent?: string|float|int, weight?: int, amount?: int}>,
+     * }  $data
+     */
     private function split(Workspace $workspace, Trip $trip, array $data): SplitExpense
     {
         return $this->inWorkspace(

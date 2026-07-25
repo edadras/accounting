@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\MarketData;
 
+use Closure;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
@@ -70,14 +71,19 @@ abstract class MarketDataTestCase extends LedgerTestCase
      * first match wins, so a second call would otherwise keep replying with the
      * first fixture — and every "the feed changed" test would quietly assert
      * nothing.
+     *
+     * @param  array<string, mixed>|Closure  $stub
      */
-    protected function fakeHttp(array|callable $stub): void
+    protected function fakeHttp(array|Closure $stub): void
     {
         Http::swap(new Factory);
         Http::fake($stub);
     }
 
-    /** @return array{stored:int, rejected:int, base:string} */
+    /**
+     * @param  list<string>|null  $quotes
+     * @return array{stored:int, rejected:int, base:string}
+     */
     protected function refreshRates(?string $base = null, ?array $quotes = null): array
     {
         /** @var array{stored:int, rejected:int, base:string} $result */

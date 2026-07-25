@@ -6,6 +6,7 @@ namespace Tests\Feature\Payroll;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\PendingCommand;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
@@ -32,9 +33,7 @@ final class PayrollMigrationTest extends PayrollTestCase
             $this->assertTrue(Schema::hasTable($table), "[{$table}] should exist after migrating.");
         }
 
-        $this->artisan('migrate:rollback', [
-            '--path' => 'modules/Payroll/Database/Migrations',
-        ])->assertSuccessful();
+        $this->migration('migrate:rollback')->assertSuccessful();
 
         foreach (self::TABLES as $table) {
             $this->assertFalse(Schema::hasTable($table), "[{$table}] should be gone after rolling back.");
@@ -46,9 +45,7 @@ final class PayrollMigrationTest extends PayrollTestCase
         $this->assertTrue(Schema::hasTable('accounts'));
         $this->assertTrue(Schema::hasTable('workspaces'));
 
-        $this->artisan('migrate', [
-            '--path' => 'modules/Payroll/Database/Migrations',
-        ])->assertSuccessful();
+        $this->migration('migrate')->assertSuccessful();
 
         foreach (self::TABLES as $table) {
             $this->assertTrue(Schema::hasTable($table), "[{$table}] should be back after migrating again.");
@@ -79,5 +76,22 @@ final class PayrollMigrationTest extends PayrollTestCase
                 );
             }
         }
+    }
+
+    /**
+     * Runs $command over the module's own migration path.
+     *
+     * artisan() degrades to a bare exit code when console output is not mocked;
+     * this suite keeps it mocked, so there is always a command to assert on.
+     */
+    private function migration(string $command): PendingCommand
+    {
+        $pending = $this->artisan($command, [
+            '--path' => 'modules/Payroll/Database/Migrations',
+        ]);
+
+        $this->assertInstanceOf(PendingCommand::class, $pending);
+
+        return $pending;
     }
 }

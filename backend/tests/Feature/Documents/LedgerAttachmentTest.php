@@ -45,17 +45,17 @@ final class LedgerAttachmentTest extends LedgerTestCase
             $this->assertSame($workspace->id, $link->workspace_id);
             $this->assertSame(26, strlen((string) $link->id), 'The link row must get a ULID like every other row.');
 
-            $documents = $transaction->fresh()->documents;
+            $documents = $transaction->refresh()->documents;
 
             $this->assertSame([$receipt->id], $documents->pluck('id')->all());
             $this->assertNotContains($unrelated->id, $documents->pluck('id')->all());
 
             // Attaching the same receipt again is the same link, not a second one.
             $transaction->attachDocument($receipt);
-            $this->assertCount(1, $transaction->fresh()->documents);
+            $this->assertCount(1, $transaction->refresh()->documents);
 
             $transaction->detachDocument($receipt);
-            $this->assertCount(0, $transaction->fresh()->documents);
+            $this->assertCount(0, $transaction->refresh()->documents);
         });
     }
 
@@ -70,7 +70,7 @@ final class LedgerAttachmentTest extends LedgerTestCase
 
             $account->attachDocument($statement);
 
-            $this->assertSame([$statement->id], $account->fresh()->documents->pluck('id')->all());
+            $this->assertSame([$statement->id], $account->refresh()->documents->pluck('id')->all());
         });
     }
 
@@ -97,7 +97,7 @@ final class LedgerAttachmentTest extends LedgerTestCase
 
         $this->assertCount(
             0,
-            $this->inWorkspace($theirs, fn () => Transaction::query()->find($transaction->id)?->documents ?? []),
+            $this->inWorkspace($theirs, fn () => Transaction::query()->find($transaction->id)->documents ?? []),
         );
     }
 

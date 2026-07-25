@@ -131,7 +131,7 @@ final class SyncTest extends LedgerTestCase
 
         $this->assertSame('conflict', $first[0]['status']);
         $this->assertSame($first, $second);
-        $this->assertSame(7_000, (int) $this->transaction($workspace, $id)->amount);
+        $this->assertSame(7_000, (int) $this->storedTransaction($workspace, $id)->amount);
     }
 
     #[Test]
@@ -158,7 +158,7 @@ final class SyncTest extends LedgerTestCase
         $response->assertJsonPath('results.0.server_payload.amount', 7_000);
         $response->assertJsonPath('results.0.server_payload.version', 2);
 
-        $this->assertSame(7_000, (int) $this->transaction($workspace, $id)->amount);
+        $this->assertSame(7_000, (int) $this->storedTransaction($workspace, $id)->amount);
     }
 
     #[Test]
@@ -184,7 +184,7 @@ final class SyncTest extends LedgerTestCase
         $response->assertJsonPath('results.0.status', 'merged');
         $response->assertJsonPath('results.0.server_version', 3);
 
-        $transaction = $this->transaction($workspace, $id);
+        $transaction = $this->storedTransaction($workspace, $id);
 
         $this->assertSame('coffee on the metro', $transaction->description);
         $this->assertSame(7_000, (int) $transaction->amount);
@@ -231,7 +231,7 @@ final class SyncTest extends LedgerTestCase
         $response->assertJsonPath('results.0.status', 'conflict');
         $response->assertJsonPath('results.0.reason', 'deleted_on_server');
 
-        $transaction = $this->transaction($workspace, $id);
+        $transaction = $this->storedTransaction($workspace, $id);
 
         $this->assertTrue($transaction->trashed());
         $this->assertNotSame('typed on the plane', $transaction->description);
@@ -420,7 +420,7 @@ final class SyncTest extends LedgerTestCase
         $response->assertJsonPath('results.0.server_payload', null);
 
         $this->assertSame(0, $this->countTransactions($intruderWorkspace));
-        $this->assertSame(5_000, (int) $this->transaction($ownerWorkspace, $secretId)->amount);
+        $this->assertSame(5_000, (int) $this->storedTransaction($ownerWorkspace, $secretId)->amount);
 
         // The intruder's pull of their own workspace stays empty of it too.
         $mine = $this->pull($intruder, $intruderWorkspace, ['since' => '1970-01-01T00:00:00Z'], $intruderDevice);
@@ -516,7 +516,7 @@ final class SyncTest extends LedgerTestCase
     {
         $changes = [];
 
-        foreach (array_values($ids) as $index => $id) {
+        foreach ($ids as $index => $id) {
             $changes[] = $this->change($id, 'create', 0, [
                 'type' => 'expense',
                 'account_id' => $account->id,
@@ -530,7 +530,10 @@ final class SyncTest extends LedgerTestCase
         return $changes;
     }
 
-    /** @param  array<string, mixed>  $payload */
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{entity: string, id: string, op: string, base_version: int, payload: array<string, mixed>}
+     */
     private function change(string $id, string $op, int $baseVersion, array $payload): array
     {
         return [
@@ -571,7 +574,10 @@ final class SyncTest extends LedgerTestCase
             ->assertJsonPath('results.0.server_version', 2);
     }
 
-    /** @param  list<array<string, mixed>>  $changes */
+    /**
+     * @param  list<array<string, mixed>>  $changes
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function push(User $user, Workspace $workspace, array $changes, ?Device $device = null): TestResponse
     {
         Sanctum::actingAs($user);
@@ -582,7 +588,10 @@ final class SyncTest extends LedgerTestCase
         ], static fn (mixed $value): bool => $value !== null), $this->headers($workspace));
     }
 
-    /** @param  array<string, mixed>  $query */
+    /**
+     * @param  array<string, mixed>  $query
+     * @return TestResponse<\Illuminate\Http\Response>
+     */
     private function pull(User $user, Workspace $workspace, array $query, ?Device $device = null): TestResponse
     {
         Sanctum::actingAs($user);
@@ -596,11 +605,26 @@ final class SyncTest extends LedgerTestCase
         return $this->getJson('/api/v1/sync/pull?'.http_build_query($query), $headers);
     }
 
+    /** Whatever the server holds under $id, deleted rows included — or nothing. */
     private function transaction(Workspace $workspace, string $id): ?Transaction
     {
         return $this->inWorkspace(
             $workspace,
             fn () => Transaction::query()->withTrashed()->find($id),
+        );
+    }
+
+    /**
+     * The row the test has just pushed, which the server is expected to hold.
+     *
+     * Its absence is the test failing rather than a null worth threading
+     * through the assertions that follow.
+     */
+    private function storedTransaction(Workspace $workspace, string $id): Transaction
+    {
+        return $this->inWorkspace(
+            $workspace,
+            fn () => Transaction::query()->withTrashed()->findOrFail($id),
         );
     }
 

@@ -166,6 +166,8 @@ final class ReceiptExtractionTest extends AiTestCase
     private function write(string $contents): string
     {
         $path = tempnam(sys_get_temp_dir(), 'receipt');
+        $this->assertIsString($path);
+
         file_put_contents($path, $contents);
         $this->files[] = $path;
 

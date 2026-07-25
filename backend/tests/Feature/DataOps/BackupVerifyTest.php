@@ -41,7 +41,7 @@ final class BackupVerifyTest extends DataOpsTestCase
     #[Test]
     public function verification_fails_when_there_is_no_backup_at_all(): void
     {
-        $this->artisan('backup:verify')
+        $this->runArtisan('backup:verify')
             ->expectsOutputToContain('No backup found')
             ->assertExitCode(1);
     }
@@ -51,7 +51,7 @@ final class BackupVerifyTest extends DataOpsTestCase
     {
         Storage::disk('local')->put("{$this->directory}/2026-07-25-030000.zip", 'pretend-this-is-a-zip');
 
-        $this->artisan('backup:verify')->assertExitCode(0);
+        $this->runArtisan('backup:verify')->assertExitCode(0);
     }
 
     #[Test]
@@ -59,7 +59,7 @@ final class BackupVerifyTest extends DataOpsTestCase
     {
         Storage::disk('local')->put("{$this->directory}/2026-07-25-030000.zip", '');
 
-        $this->artisan('backup:verify')
+        $this->runArtisan('backup:verify')
             ->expectsOutputToContain('is empty')
             ->assertExitCode(1);
     }
@@ -71,7 +71,7 @@ final class BackupVerifyTest extends DataOpsTestCase
 
         $this->travel(config('dataops.backup.max_age_hours') + 2)->hours();
 
-        $this->artisan('backup:verify')
+        $this->runArtisan('backup:verify')
             ->expectsOutputToContain('the limit is')
             ->assertExitCode(1);
     }

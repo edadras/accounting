@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\I18n;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\PendingCommand;
 use Laravel\Sanctum\Sanctum;
 use Modules\I18n\Models\Translation;
 use PHPUnit\Framework\Attributes\Test;
@@ -142,8 +143,13 @@ final class TranslationApiTest extends LedgerTestCase
 
         // A key present in English and missing in Persian falls back silently
         // at runtime, which nobody notices until a Persian speaker does.
-        $this->artisan('i18n:missing')
-            ->expectsOutputToContain('1 missing translations')
+        $missing = $this->artisan('i18n:missing');
+
+        // artisan() degrades to a bare exit code when console output is not
+        // mocked; these tests keep it mocked, so there is a command to drive.
+        $this->assertInstanceOf(PendingCommand::class, $missing);
+
+        $missing->expectsOutputToContain('1 missing translations')
             ->assertSuccessful();
     }
 }

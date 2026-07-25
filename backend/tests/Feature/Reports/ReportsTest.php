@@ -95,7 +95,7 @@ final class ReportsTest extends LedgerTestCase
 
             // Belt and braces: the transfer really is in the database.
             $this->assertSame(1, Transaction::query()->ofType('transfer')->count());
-            $this->assertSame($workspace->id, $workspace->fresh()->id);
+            $this->assertSame($workspace->id, $workspace->refresh()->id);
         });
     }
 

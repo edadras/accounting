@@ -168,8 +168,12 @@ final class ChatSecurityTest extends AiTestCase
         );
 
         $tool = $messages->firstWhere('role', AiMessage::ROLE_TOOL);
+        $this->assertNotNull($tool, 'The tool call must have been recorded.');
         $this->assertSame('get_transactions', $tool->tool_name);
-        $this->assertArrayHasKey('arguments', $tool->tool_result);
+
+        $result = $tool->tool_result;
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('arguments', $result);
     }
 
     #[Test]
@@ -181,7 +185,7 @@ final class ChatSecurityTest extends AiTestCase
 
         $this->expectExceptionMessage('AI layer is switched off');
 
-        $this->ask($mine->fresh(), 'show my transactions');
+        $this->ask($mine->refresh(), 'show my transactions');
     }
 
     /** @return array{Workspace, Workspace} */

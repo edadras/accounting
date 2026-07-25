@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Search;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\PendingCommand;
 use Modules\Core\Models\Workspace;
 use Modules\Documents\Models\Document;
 use Modules\Ledger\Actions\RecordTransaction;
@@ -41,7 +42,7 @@ final class ReindexTest extends LedgerTestCase
 
         $this->assertSame([], $this->find($workspace, self::MEAT)[SearchEngine::TYPE_TRANSACTIONS]);
 
-        $this->artisan('search:reindex')->assertSuccessful();
+        $this->command('search:reindex')->assertSuccessful();
 
         $results = $this->find($workspace, self::MEAT);
 
@@ -61,10 +62,10 @@ final class ReindexTest extends LedgerTestCase
 
         $this->forgetTheIndex();
 
-        $this->artisan('search:reindex')->assertSuccessful();
+        $this->command('search:reindex')->assertSuccessful();
         $afterFirst = $this->indexSize();
 
-        $this->artisan('search:reindex')->assertSuccessful();
+        $this->command('search:reindex')->assertSuccessful();
 
         $this->assertSame($afterFirst, $this->indexSize(), 'Reindexing must update rows in place, not add more.');
         $this->assertSame(1, SearchEntry::query()
@@ -73,7 +74,7 @@ final class ReindexTest extends LedgerTestCase
             ->count());
 
         // And a run over an index that was never emptied is a no-op too.
-        $this->artisan('search:reindex')->assertSuccessful();
+        $this->command('search:reindex')->assertSuccessful();
         $this->assertSame($afterFirst, $this->indexSize());
     }
 
@@ -87,14 +88,14 @@ final class ReindexTest extends LedgerTestCase
 
         $this->forgetTheIndex();
 
-        $this->artisan('search:reindex --type=documents')->assertSuccessful();
+        $this->command('search:reindex --type=documents')->assertSuccessful();
 
         $results = $this->find($workspace, self::MEAT);
 
         $this->assertSame([], $results[SearchEngine::TYPE_TRANSACTIONS]);
         $this->assertSame([$document->id], array_column($results[SearchEngine::TYPE_DOCUMENTS], 'id'));
 
-        $this->artisan('search:reindex --type=transactions,categories')->assertSuccessful();
+        $this->command('search:reindex --type=transactions,categories')->assertSuccessful();
 
         $this->assertSame(
             [$transaction->id],
@@ -113,7 +114,7 @@ final class ReindexTest extends LedgerTestCase
 
         $this->forgetTheIndex();
 
-        $this->artisan("search:reindex --workspace={$mine->id}")->assertSuccessful();
+        $this->command("search:reindex --workspace={$mine->id}")->assertSuccessful();
 
         $this->assertSame([$ours->id], array_column(
             $this->find($mine, self::MEAT)[SearchEngine::TYPE_TRANSACTIONS],
@@ -128,8 +129,8 @@ final class ReindexTest extends LedgerTestCase
     {
         $this->world('refused@example.test');
 
-        $this->artisan('search:reindex --type=invoices')->assertFailed();
-        $this->artisan('search:reindex --workspace=01JZZZZZZZZZZZZZZZZZZZZZZZ')->assertFailed();
+        $this->command('search:reindex --type=invoices')->assertFailed();
+        $this->command('search:reindex --workspace=01JZZZZZZZZZZZZZZZZZZZZZZZ')->assertFailed();
     }
 
     #[Test]
@@ -143,7 +144,7 @@ final class ReindexTest extends LedgerTestCase
         $this->inWorkspace($workspace, fn () => $removed->delete());
 
         $this->forgetTheIndex();
-        $this->artisan('search:reindex')->assertSuccessful();
+        $this->command('search:reindex')->assertSuccessful();
 
         $this->assertSame(
             [$kept->id],
@@ -152,6 +153,19 @@ final class ReindexTest extends LedgerTestCase
     }
 
     // --- helpers -----------------------------------------------------------
+
+    /**
+     * artisan() hands back a bare exit code once console output is no longer
+     * mocked, and only the PendingCommand carries the assertions.
+     */
+    private function command(string $command): PendingCommand
+    {
+        $pending = $this->artisan($command);
+
+        $this->assertInstanceOf(PendingCommand::class, $pending);
+
+        return $pending;
+    }
 
     private function world(string $email): Workspace
     {

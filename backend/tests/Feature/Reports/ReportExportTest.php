@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Modules\Core\Models\Workspace;
 use Modules\Ledger\Actions\RecordTransaction;
@@ -18,6 +19,7 @@ use Modules\Reports\Support\ExportLabels;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Tests\Feature\LedgerTestCase;
 
 /**
@@ -70,7 +72,7 @@ final class ReportExportTest extends LedgerTestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
 
-        $csv = $response->getContent();
+        $csv = $this->body($response);
 
         // ₺350.00 was spent. The file says so in major units.
         $this->assertStringContainsString('350.00', $csv);
@@ -112,7 +114,7 @@ final class ReportExportTest extends LedgerTestCase
 
         $response->assertOk();
 
-        $rows = $this->parseCsv($response->getContent());
+        $rows = $this->parseCsv($this->body($response));
 
         $this->assertSame(['Rank', 'Merchant', 'Total', 'Transactions', 'Share %'], $rows[0]);
         $this->assertCount(1, $rows);
@@ -133,7 +135,7 @@ final class ReportExportTest extends LedgerTestCase
         $xlsx->assertOk();
 
         $file = tempnam(sys_get_temp_dir(), 'empty').'.xlsx';
-        file_put_contents($file, $xlsx->getContent());
+        file_put_contents($file, $this->body($xlsx));
 
         try {
             $sheet = IOFactory::load($file)->getActiveSheet();
@@ -167,7 +169,7 @@ final class ReportExportTest extends LedgerTestCase
         $response->assertOk();
 
         $file = tempnam(sys_get_temp_dir(), 'export').'.xlsx';
-        file_put_contents($file, $response->getContent());
+        file_put_contents($file, $this->body($response));
 
         $sheet = IOFactory::load($file)->getActiveSheet();
 
@@ -181,8 +183,11 @@ final class ReportExportTest extends LedgerTestCase
             $this->assertEqualsWithDelta(350.0, (float) $cell->getValue(), 0.0001);
 
             // The currency lives in the number format, so the cell stays a number.
-            $this->assertStringContainsString('₺', $cell->getStyle()->getNumberFormat()->getFormatCode());
-            $this->assertStringContainsString('0.00', $cell->getStyle()->getNumberFormat()->getFormatCode());
+            $format = $cell->getStyle()->getNumberFormat()->getFormatCode();
+
+            $this->assertIsString($format);
+            $this->assertStringContainsString('₺', $format);
+            $this->assertStringContainsString('0.00', $format);
 
             $this->assertSame(DataType::TYPE_STRING, $sheet->getCell('A2')->getDataType());
         } finally {
@@ -206,15 +211,22 @@ final class ReportExportTest extends LedgerTestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
 
-        $pdf = $response->getContent();
+        $pdf = $this->body($response);
 
         $this->assertStringStartsWith('%PDF', $pdf);
         $this->assertGreaterThan(1000, strlen($pdf));
 
         $export = $this->inWorkspace($workspace, fn () => ReportExport::query()->sole());
 
-        Storage::disk('local')->assertExists($export->path);
-        $this->assertStringStartsWith('%PDF', Storage::disk('local')->get($export->path));
+        $path = $export->path;
+        $this->assertNotNull($path, 'A finished export must remember where it wrote the file.');
+
+        Storage::disk('local')->assertExists($path);
+
+        $stored = Storage::disk('local')->get($path);
+
+        $this->assertIsString($stored);
+        $this->assertStringStartsWith('%PDF', $stored);
     }
 
     #[Test]
@@ -232,7 +244,7 @@ final class ReportExportTest extends LedgerTestCase
 
         $response->assertOk();
 
-        $pdf = $response->getContent();
+        $pdf = $this->body($response);
 
         $this->assertStringStartsWith('%PDF', $pdf);
 
@@ -349,14 +361,14 @@ final class ReportExportTest extends LedgerTestCase
 
         $response->assertOk();
 
-        $rows = $this->parseCsv($response->getContent());
+        $rows = $this->parseCsv($this->body($response));
 
         // 7 March 2026 is 16 Esfand 1404 — the day the app shows for `fa`.
         $this->assertSame('1404-12-16', $rows[1][1]);
         $this->assertSame('1404-12-16', $rows[1][2]);
 
         // Latin digits, not ۱۴۰۴: the file is data before it is a document.
-        $this->assertStringNotContainsString('۱۴۰۴', $response->getContent());
+        $this->assertStringNotContainsString('۱۴۰۴', $this->body($response));
 
         // Same day, Gregorian, when the locale asks for it.
         $english = $this->post(
@@ -371,7 +383,7 @@ final class ReportExportTest extends LedgerTestCase
             $this->headers($workspace),
         );
 
-        $this->assertSame('2026-03-07', $this->parseCsv($english->getContent())[1][1]);
+        $this->assertSame('2026-03-07', $this->parseCsv($this->body($english))[1][1]);
     }
 
     #[Test]
@@ -410,8 +422,8 @@ final class ReportExportTest extends LedgerTestCase
         $download = $this->get("/api/v1/reports/exports/{$exportId}/download", $this->headers($workspace));
 
         $download->assertOk();
-        $this->assertStringContainsString('350.00', $download->getContent());
-        $this->assertStringNotContainsString('35000', $download->getContent());
+        $this->assertStringContainsString('350.00', $this->body($download));
+        $this->assertStringNotContainsString('35000', $this->body($download));
     }
 
     #[Test]
@@ -468,11 +480,11 @@ final class ReportExportTest extends LedgerTestCase
 
         Sanctum::actingAs($user);
 
-        $csv = $this->post(
+        $csv = $this->body($this->post(
             '/api/v1/reports/top-merchants/export',
             ['format' => 'csv', 'locale' => 'en', 'from' => '2026-03-01', 'to' => '2026-03-31'],
             $this->headers($workspace),
-        )->getContent();
+        ));
 
         $rows = $this->parseCsv($csv);
 
@@ -514,7 +526,17 @@ final class ReportExportTest extends LedgerTestCase
         return ['X-Workspace-Id' => $workspace->id];
     }
 
-    /** @return list<list<string>> */
+    /** @param  TestResponse<SymfonyResponse>  $response */
+    private function body(TestResponse $response): string
+    {
+        $body = $response->getContent();
+
+        $this->assertIsString($body);
+
+        return $body;
+    }
+
+    /** @return list<list<string|null>> */
     private function parseCsv(string $csv): array
     {
         // The BOM is there so Excel reads UTF-8; it is not part of a field.

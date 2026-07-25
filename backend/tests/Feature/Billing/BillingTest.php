@@ -235,7 +235,9 @@ final class BillingTest extends LedgerTestCase
         $this->assertFalse($entitlements->allows('ai'));
 
         // The row still remembers what was tried; only the entitlement lapsed.
-        $this->assertSame('premium', Subscription::forWorkspaceId($workspace->id)->plan_code);
+        $subscription = Subscription::forWorkspaceId($workspace->id);
+        $this->assertNotNull($subscription);
+        $this->assertSame('premium', $subscription->plan_code);
     }
 
     #[Test]
@@ -473,6 +475,7 @@ final class BillingTest extends LedgerTestCase
         $this->assertSame([], $offenders, implode(' ', $offenders));
 
         $middleware = file_get_contents(base_path('modules/Billing/Http/Middleware/RequiresEntitlement.php'));
+        $this->assertIsString($middleware);
 
         $this->assertStringContainsString('Entitlements::current()', $middleware);
         $this->assertSame(

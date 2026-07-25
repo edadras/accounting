@@ -447,7 +447,23 @@ final class InvestmentTest extends LedgerTestCase
         ]));
     }
 
-    /** @param  array<string, mixed>  $data */
+    /**
+     * The trade payload minus investment_id, which this helper supplies.
+     *
+     * @param  array{
+     *   id?: string,
+     *   action: string,
+     *   quantity?: string|int|null,
+     *   price?: int,
+     *   fee?: int,
+     *   currency?: string|null,
+     *   fx_rate?: float|string|null,
+     *   occurred_at?: \DateTimeInterface|string|null,
+     *   notes?: string|null,
+     *   transaction_id?: string|null,
+     *   idempotency_key?: string|null,
+     * }  $data
+     */
     private function trade(Workspace $workspace, Investment $investment, array $data): InvestmentTransaction
     {
         return $this->inWorkspace($workspace, fn () => app(RecordInvestmentTrade::class)->handle(

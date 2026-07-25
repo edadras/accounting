@@ -51,7 +51,7 @@ final class FamilyTest extends LedgerTestCase
 
         $report = $this->inWorkspace(
             $workspace,
-            fn () => app(MemberSpending::class)->forMember($child->fresh(), Period::of('2026-07')),
+            fn () => app(MemberSpending::class)->forMember($child->refresh(), Period::of('2026-07')),
         );
 
         $this->assertSame(75_00, $report['spent']->minorUnits);
@@ -72,7 +72,7 @@ final class FamilyTest extends LedgerTestCase
 
         $report = $this->inWorkspace(
             $workspace,
-            fn () => app(MemberSpending::class)->forMember($child->fresh(), Period::of('2026-07')),
+            fn () => app(MemberSpending::class)->forMember($child->refresh(), Period::of('2026-07')),
         );
 
         $this->assertSame(120_00, $report['spent']->minorUnits);
@@ -91,7 +91,7 @@ final class FamilyTest extends LedgerTestCase
 
         $report = $this->inWorkspace(
             $workspace,
-            fn () => app(MemberSpending::class)->forMember($parent->fresh(), Period::of('2026-07')),
+            fn () => app(MemberSpending::class)->forMember($parent->refresh(), Period::of('2026-07')),
         );
 
         $this->assertSame(60_00, $report['spent']->minorUnits);
@@ -139,8 +139,8 @@ final class FamilyTest extends LedgerTestCase
         $this->assertSame([$child->tag()], $transaction->tags);
         $this->assertCount(2, $transaction->entries, 'An allowance must be a real double-entry posting.');
 
-        $this->assertSame(850_00, $parentAccount->fresh()->current_balance);
-        $this->assertSame(150_00, $childAccount->fresh()->current_balance);
+        $this->assertSame(850_00, $parentAccount->refresh()->current_balance);
+        $this->assertSame(150_00, $childAccount->refresh()->current_balance);
     }
 
     #[Test]
@@ -157,7 +157,7 @@ final class FamilyTest extends LedgerTestCase
 
         $report = $this->inWorkspace(
             $workspace,
-            fn () => app(MemberSpending::class)->forMember($child->fresh(), Period::of('2026-07')),
+            fn () => app(MemberSpending::class)->forMember($child->refresh(), Period::of('2026-07')),
         );
 
         // Receiving money is not spending it; if it were, a child would exhaust
@@ -360,7 +360,7 @@ final class FamilyTest extends LedgerTestCase
 
         $report = $this->inWorkspace(
             $victimWorkspace,
-            fn () => app(MemberSpending::class)->forMember($victimChild->fresh(), Period::of('2026-07')),
+            fn () => app(MemberSpending::class)->forMember($victimChild->refresh(), Period::of('2026-07')),
         );
 
         $this->assertSame(0, $report['spent']->minorUnits);
@@ -432,7 +432,7 @@ final class FamilyTest extends LedgerTestCase
     {
         app(WorkspaceContext::class)->forget();
 
-        Sanctum::actingAs($workspace->owner);
+        Sanctum::actingAs($workspace->owner()->firstOrFail());
 
         return $this;
     }

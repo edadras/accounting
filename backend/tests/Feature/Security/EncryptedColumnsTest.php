@@ -31,6 +31,7 @@ final class EncryptedColumnsTest extends SecurityTestCase
 
         $row = DB::table('users')->where('id', $user->id)->first();
 
+        $this->assertNotNull($row);
         $this->assertNotSame($secret, $row->two_factor_secret);
         $this->assertStringNotContainsString($secret, (string) $row->two_factor_secret);
         $this->assertStringNotContainsString($codes[0], (string) $row->two_factor_recovery_codes);
@@ -59,7 +60,7 @@ final class EncryptedColumnsTest extends SecurityTestCase
         DB::table('accounts')->where('id', $account->id)->update(['iban' => self::IBAN]);
 
         $migration = $this->ibanMigration();
-        $migration->up();
+        $this->runMigration($migration, 'up');
 
         $raw = DB::table('accounts')->where('id', $account->id)->value('iban');
 
@@ -69,12 +70,12 @@ final class EncryptedColumnsTest extends SecurityTestCase
         $this->assertSame(self::IBAN, $this->reload($account)->iban);
 
         // Running it again must not encrypt the ciphertext a second time.
-        $migration->up();
+        $this->runMigration($migration, 'up');
         $this->assertSame(self::IBAN, $this->reload($account)->iban);
 
         // And down() really puts the plaintext back, rather than leaving a
         // column full of unreadable strings behind.
-        $migration->down();
+        $this->runMigration($migration, 'down');
         $this->assertSame(self::IBAN, DB::table('accounts')->where('id', $account->id)->value('iban'));
     }
 
@@ -140,8 +141,11 @@ final class EncryptedColumnsTest extends SecurityTestCase
 
     private function reload(Account $account): Account
     {
+        $workspace = $account->workspace;
+        $this->assertNotNull($workspace);
+
         return $this->inWorkspace(
-            $account->workspace,
+            $workspace,
             fn () => Account::query()->findOrFail($account->id),
         );
     }
@@ -149,5 +153,19 @@ final class EncryptedColumnsTest extends SecurityTestCase
     private function ibanMigration(): Migration
     {
         return require base_path('modules/Security/Database/Migrations/2026_01_01_001320_encrypt_account_ibans.php');
+    }
+
+    /**
+     * A migration file returns an anonymous class, and the base Migration class
+     * declares neither up() nor down() — the framework's migrator reaches them
+     * by name at runtime. This does the same, but checks the direction really
+     * exists first so a renamed method fails loudly instead of silently.
+     */
+    private function runMigration(Migration $migration, string $direction): void
+    {
+        $run = [$migration, $direction];
+        $this->assertIsCallable($run);
+
+        $run();
     }
 }

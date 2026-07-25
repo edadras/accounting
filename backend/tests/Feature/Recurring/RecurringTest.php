@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Recurring;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\PendingCommand;
 use Modules\Core\Models\Workspace;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
@@ -36,13 +37,20 @@ final class RecurringTest extends LedgerTestCase
         $this->assertCount(1, $posted);
         $this->assertSame(100_00, $posted[0]->amount);
         $this->assertSame('recurring', $posted[0]->source);
-        $this->assertSame($rule->id, $posted[0]->source_meta['recurring_rule_id']);
+        $meta = $posted[0]->source_meta;
+
+        $this->assertIsArray($meta);
+        $this->assertArrayHasKey('recurring_rule_id', $meta);
+        $this->assertSame($rule->id, $meta['recurring_rule_id']);
         $this->assertSame('2026-07-05', $posted[0]->occurred_at->toDateString());
 
         $fresh = $this->inWorkspace($workspace, fn () => $rule->fresh());
+        $this->assertNotNull($fresh);
 
-        $this->assertSame('2026-08-05', $fresh->next_run_at->toDateString());
-        $this->assertSame(9_900_00, $account->fresh()->current_balance);
+        $nextRun = $fresh->next_run_at;
+        $this->assertNotNull($nextRun);
+        $this->assertSame('2026-08-05', $nextRun->toDateString());
+        $this->assertSame(9_900_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -57,7 +65,7 @@ final class RecurringTest extends LedgerTestCase
         $this->assertCount(0, $this->postDue($workspace, '2026-07-10 23:59:00'));
 
         $this->assertSame(1, $this->transactionCount($workspace));
-        $this->assertSame(9_900_00, $account->fresh()->current_balance);
+        $this->assertSame(9_900_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -71,7 +79,7 @@ final class RecurringTest extends LedgerTestCase
 
         // A rule whose advance was lost — a crash between the posting and the
         // save, a hand-edited row — must not be able to pay the same month again.
-        $this->inWorkspace($workspace, fn () => $rule->fresh()->forceFill([
+        $this->inWorkspace($workspace, fn () => $rule->refresh()->forceFill([
             'next_run_at' => '2026-07-05 09:00:00',
         ])->save());
 
@@ -79,7 +87,7 @@ final class RecurringTest extends LedgerTestCase
 
         $this->assertCount(1, $posted, 'The ledger returns the transaction it already has.');
         $this->assertSame(1, $this->transactionCount($workspace));
-        $this->assertSame(9_900_00, $account->fresh()->current_balance);
+        $this->assertSame(9_900_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -96,7 +104,7 @@ final class RecurringTest extends LedgerTestCase
             array_map(fn (Transaction $t): string => $t->occurred_at->toDateString(), $posted),
         );
 
-        $this->assertSame(9_700_00, $account->fresh()->current_balance);
+        $this->assertSame(9_700_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -117,10 +125,11 @@ final class RecurringTest extends LedgerTestCase
         );
 
         $fresh = $this->inWorkspace($workspace, fn () => $rule->fresh());
+        $this->assertNotNull($fresh);
 
         $this->assertNull($fresh->next_run_at, 'An exhausted rule must never come up as due again.');
         $this->assertCount(0, $this->postDue($workspace, '2027-01-01 12:00:00'));
-        $this->assertSame(9_800_00, $account->fresh()->current_balance);
+        $this->assertSame(9_800_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -132,7 +141,7 @@ final class RecurringTest extends LedgerTestCase
         $this->rule($workspace, $account, ['starts_at' => '2026-07-05 09:00:00', 'auto_post' => false]);
 
         $this->assertCount(0, $this->postDue($workspace, '2026-07-10 12:00:00'));
-        $this->assertSame(10_000_00, $account->fresh()->current_balance);
+        $this->assertSame(10_000_00, $account->refresh()->current_balance);
     }
 
     #[Test]
@@ -163,8 +172,8 @@ final class RecurringTest extends LedgerTestCase
         [$myWorkspace, $myAccount] = $this->world('my-rules@example.test');
 
         $this->assertCount(0, $this->postDue($myWorkspace, '2026-07-10 12:00:00'));
-        $this->assertSame(10_000_00, $theirAccount->fresh()->current_balance);
-        $this->assertSame(10_000_00, $myAccount->fresh()->current_balance);
+        $this->assertSame(10_000_00, $theirAccount->refresh()->current_balance);
+        $this->assertSame(10_000_00, $myAccount->refresh()->current_balance);
     }
 
     #[Test]
@@ -176,19 +185,32 @@ final class RecurringTest extends LedgerTestCase
         $this->rule($firstWorkspace, $firstAccount, ['starts_at' => '2026-07-05 09:00:00']);
         $this->rule($secondWorkspace, $secondAccount, ['starts_at' => '2026-07-05 09:00:00']);
 
-        $this->artisan('recurring:post --at="2026-07-10 12:00:00"')->assertSuccessful();
+        $this->command('recurring:post --at="2026-07-10 12:00:00"')->assertSuccessful();
 
-        $this->assertSame(9_900_00, $firstAccount->fresh()->current_balance);
-        $this->assertSame(9_900_00, $secondAccount->fresh()->current_balance);
+        $this->assertSame(9_900_00, $firstAccount->refresh()->current_balance);
+        $this->assertSame(9_900_00, $secondAccount->refresh()->current_balance);
 
         // Running the nightly job again the same day changes nothing.
-        $this->artisan('recurring:post --at="2026-07-10 12:00:00"')->assertSuccessful();
+        $this->command('recurring:post --at="2026-07-10 12:00:00"')->assertSuccessful();
 
-        $this->assertSame(9_900_00, $firstAccount->fresh()->current_balance);
-        $this->assertSame(9_900_00, $secondAccount->fresh()->current_balance);
+        $this->assertSame(9_900_00, $firstAccount->refresh()->current_balance);
+        $this->assertSame(9_900_00, $secondAccount->refresh()->current_balance);
     }
 
     // --- helpers -----------------------------------------------------------
+
+    /**
+     * artisan() hands back a bare exit code once console output is no longer
+     * mocked, and only the PendingCommand carries the assertions.
+     */
+    private function command(string $command): PendingCommand
+    {
+        $pending = $this->artisan($command);
+
+        $this->assertInstanceOf(PendingCommand::class, $pending);
+
+        return $pending;
+    }
 
     /** @return array{0: Workspace, 1: Account} */
     private function world(string $email): array

@@ -47,7 +47,9 @@ final class AuditLogTest extends LedgerTestCase
 
         $this->assertNotNull($entry);
         $this->assertSame($user->id, $entry->user_id);
-        $this->assertSame(35000, $entry->after['amount']);
+        $after = $entry->after;
+        $this->assertIsArray($after);
+        $this->assertSame(35000, $after['amount']);
     }
 
     #[Test]
@@ -72,11 +74,16 @@ final class AuditLogTest extends LedgerTestCase
 
         $this->assertNotNull($entry);
 
+        $before = $entry->before;
+        $after = $entry->after;
+        $this->assertIsArray($before);
+        $this->assertIsArray($after);
+
         // Only the renamed field — writing the whole row every time would bury
         // the one thing a reviewer is looking for.
-        $this->assertSame(['name'], array_keys($entry->after));
-        $this->assertSame('Wallet', $entry->before['name']);
-        $this->assertSame('Renamed wallet', $entry->after['name']);
+        $this->assertSame(['name'], array_keys($after));
+        $this->assertSame('Wallet', $before['name']);
+        $this->assertSame('Renamed wallet', $after['name']);
     }
 
     #[Test]
@@ -103,7 +110,9 @@ final class AuditLogTest extends LedgerTestCase
             ->first();
 
         $this->assertNotNull($entry);
-        $this->assertSame(1200, $entry->before['amount']);
+        $before = $entry->before;
+        $this->assertIsArray($before);
+        $this->assertSame(1200, $before['amount']);
     }
 
     #[Test]
@@ -131,7 +140,7 @@ final class AuditLogTest extends LedgerTestCase
             // expected
         }
 
-        $this->assertSame('test.event', $entry->fresh()->action);
+        $this->assertSame('test.event', $entry->refresh()->action);
     }
 
     #[Test]
