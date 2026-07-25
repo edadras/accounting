@@ -18,51 +18,81 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fake_server.dart';
 import 'support/harness.dart';
 
-/// Nothing here uses `pumpAndSettle`: `SyncScope` holds a periodic timer for as
-/// long as it is mounted, so it never settles.
+/// Two rules make this file work, and breaking either one hangs it silently.
 ///
-/// THREE TESTS BELOW ARE SKIPPED. Mounting `ConflictsScreen` spins the isolate
-/// in an unbounded rebuild loop — `SyncController` is watched both through its
-/// provider and through a `ListenableBuilder`, and reading `controller.conflicts`
-/// during build re-enters `notifyListeners`. It blocks synchronously, so even
-/// `--timeout` cannot interrupt it, which is why it hangs the whole suite rather
-/// than failing.
+/// **Anything that talks to Dio runs inside `tester.runAsync`.** `testWidgets`
+/// drives a fake clock, and Dio completes its responses on real timers the fake
+/// clock never advances — so an `await` on a request simply never returns. It
+/// blocks synchronously, which is why `--timeout` cannot interrupt it and why
+/// the whole suite, not just this test, appears to freeze.
 ///
-/// The engine underneath is covered and green (see `sync_engine_test.dart`);
-/// what is unproven is this screen. Fix the notify loop, then delete the skips.
-Future<void> pumpFrames(WidgetTester tester, {int frames = 6}) async {
+/// **Nothing calls `pumpAndSettle`.** `SyncScope` holds a periodic timer for as
+/// long as it is mounted, so the tree never goes quiet and `pumpAndSettle`
+/// waits out its entire ten-minute budget instead of failing.
+Future<void> pumpFrames(WidgetTester tester, {int frames = 5}) async {
   for (var i = 0; i < frames; i++) {
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+/// A harness already carrying one unresolved conflict on `amount`: the device
+/// says 1,000 and the server says 9,999.
+Future<SyncHarness> harnessWithAmountConflict(WidgetTester tester) async {
+  final harness = (await tester.runAsync(SyncHarness.create))!;
+
+  await tester.runAsync(() async {
+    harness.offline = true;
+    final id = (await harness.recordExpenses(1)).single.id;
+
+    harness.server.conflictFor[id] =
+        serverTransactionPayload(id: id, amountMinorUnits: 9999);
+    harness.server.versions['transaction:$id'] = 4;
+
+    harness.offline = false;
+    await harness.engine.push();
+  });
+
+  return harness;
+}
+
+Widget conflictsApp(SyncController controller, AppLocale locale) {
+  return ProviderScope(
+    overrides: [
+      syncControllerProvider.overrideWithValue(controller),
+      localeProvider.overrideWith((ref) => locale),
+    ],
+    child: MaterialApp(
+      theme: NeonTheme.dark(fontFamily: 'Vazirmatn'),
+      home: const ConflictsScreen(),
+    ),
+  );
 }
 
 void main() {
   testWidgets('the offline banner shows the real pending count',
       (tester) async {
-    final adapter = MockAdapter((options) => throw connectionFailure(options));
-
-    final backend = await FinoraBackend.connect(
-      keyValueStore: MemoryKeyValueStore(),
-      tokenStore: MemoryTokenStore(),
-      adapter: adapter,
-      policy: const RetryPolicy(maxAttempts: 1),
-    );
+    final backend = (await tester.runAsync(() => FinoraBackend.connect(
+          keyValueStore: MemoryKeyValueStore(),
+          tokenStore: MemoryTokenStore(),
+          adapter: MockAdapter((options) => throw connectionFailure(options)),
+          policy: const RetryPolicy(maxAttempts: 1),
+        ),))!;
     addTearDown(backend.dispose);
 
-    await backend.store.put(
-      LocalStore.entityAccount,
-      const LocalRecord(
-        id: SyncHarness.accountId,
-        version: 1,
-        data: {
-          'id': SyncHarness.accountId,
-          'name': 'کیف پول',
-          'type': 'cash',
-          'currency': 'IRR',
-          'balance': {'value': 500000, 'currency': 'IRR', 'minor_unit': 0},
-        },
-      ),
-    );
+    await tester.runAsync(() => backend.store.put(
+          LocalStore.entityAccount,
+          const LocalRecord(
+            id: SyncHarness.accountId,
+            version: 1,
+            data: {
+              'id': SyncHarness.accountId,
+              'name': 'کیف پول',
+              'type': 'cash',
+              'currency': 'IRR',
+              'balance': {'value': 500000, 'currency': 'IRR', 'minor_unit': 0},
+            },
+          ),
+        ),);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -73,12 +103,13 @@ void main() {
     await pumpFrames(tester);
 
     // Three expenses recorded with no network at all.
-    final harness = await SyncHarness.create();
-
-    for (final draft in await harness.recordExpenses(3)) {
-      await backend.repository.record(draft);
-    }
-    await backend.controller.syncNow();
+    await tester.runAsync(() async {
+      final harness = await SyncHarness.create();
+      for (final draft in await harness.recordExpenses(3)) {
+        await backend.repository.record(draft);
+      }
+      await backend.controller.syncNow();
+    });
     await pumpFrames(tester);
 
     expect(backend.controller.state.isOnline, isFalse);
@@ -88,94 +119,53 @@ void main() {
     // Unmount so the periodic timer stops with the tree.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
-    // Skipped: see the note at the top of this file.
-  }, skip: true,);
+  });
 
   testWidgets('the conflicts screen shows both versions and resolves one',
       (tester) async {
-    final harness = await SyncHarness.create();
-
-    harness.offline = true;
-    final id = (await harness.recordExpenses(1)).single.id;
-
-    harness.server.conflictFor[id] =
-        serverTransactionPayload(id: id, amountMinorUnits: 9999);
-    harness.server.versions['transaction:$id'] = 4;
-    harness.offline = false;
-    await harness.engine.push();
-
-    final controller = SyncController(engine: harness.engine, store: harness.store);
+    final harness = await harnessWithAmountConflict(tester);
+    final controller =
+        SyncController(engine: harness.engine, store: harness.store);
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          syncControllerProvider.overrideWithValue(controller),
-          localeProvider.overrideWith((ref) => AppLocale.fa),
-        ],
-        child: MaterialApp(
-          theme: NeonTheme.dark(fontFamily: 'Vazirmatn'),
-          home: const Directionality(
-            textDirection: TextDirection.rtl,
-            child: ConflictsScreen(),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(conflictsApp(controller, AppLocale.fa));
     await pumpFrames(tester);
+
+    expect(find.text('نسخه این دستگاه'), findsOneWidget);
+    expect(find.text('نسخه سرور'), findsOneWidget);
 
     // Both amounts are on screen at once — nothing was decided for the user.
     expect(find.textContaining('۱٬۰۰۰'), findsWidgets);
     expect(find.textContaining('۹٬۹۹۹'), findsWidgets);
 
     await tester.tap(find.text('نسخه من درست است'));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await pumpFrames(tester);
 
     expect(harness.store.conflicts, isEmpty);
-    // Skipped: see the note at the top of this file.
-  }, skip: true,);
+    expect(find.text('تعارض حل‌نشده‌ای وجود ندارد.'), findsOneWidget);
+  });
 
   testWidgets('resolving in favour of the server adopts the server amount',
       (tester) async {
-    final harness = await SyncHarness.create();
-
-    harness.offline = true;
-    final id = (await harness.recordExpenses(1)).single.id;
-
-    harness.server.conflictFor[id] =
-        serverTransactionPayload(id: id, amountMinorUnits: 9999);
-    harness.server.versions['transaction:$id'] = 4;
-    harness.offline = false;
-    await harness.engine.push();
-
-    final controller = SyncController(engine: harness.engine, store: harness.store);
+    final harness = await harnessWithAmountConflict(tester);
+    final controller =
+        SyncController(engine: harness.engine, store: harness.store);
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          syncControllerProvider.overrideWithValue(controller),
-          localeProvider.overrideWith((ref) => AppLocale.en),
-        ],
-        child: MaterialApp(
-          theme: NeonTheme.dark(fontFamily: 'Vazirmatn'),
-          home: const Directionality(
-            textDirection: TextDirection.ltr,
-            child: ConflictsScreen(),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(conflictsApp(controller, AppLocale.en));
     await pumpFrames(tester);
 
     await tester.tap(find.text('Keep the server version'));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await pumpFrames(tester);
 
-    final transaction = (await harness.repository.transactions()).single;
+    final transaction =
+        (await tester.runAsync(harness.repository.transactions))!.single;
+
     expect(transaction.amount.minorUnits, 9999);
     expect(harness.store.conflicts, isEmpty);
-    // Skipped: see the note at the top of this file.
-  }, skip: true,);
+  });
 
   test('a resolution choice is one of exactly two', () {
     // Auto-resolving a money conflict is the one thing this screen must never

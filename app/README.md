@@ -4,20 +4,22 @@ Multi-platform client: Android, iOS, Web, Windows, macOS, Linux.
 
 ## Status
 
-Milestones **M2 (First App)** and the client half of **M3 (Budget & Reports)**
-from [`docs/04-roadmap.md`](../docs/04-roadmap.md).
+All ten milestones of [`docs/04-roadmap.md`](../docs/04-roadmap.md) are covered
+on the client side.
 
-Five screens: Dashboard, Transactions, Reports (cash flow + budgets), Accounts,
-Settings — plus the quick-add sheet.
+Five tabs — Dashboard, Transactions, Reports, Accounts, Settings — plus the
+quick-add sheet, an AI capture and assistant section, a conflict-resolution
+screen, and a hub reaching banking, investment, assets, travel, buildings and
+business.
 
-The app runs standalone against an in-memory repository, so `flutter run` gives
-you a working, populated UI with no backend. Swapping in the real API is a
-single provider override — see `ledgerRepositoryProvider` in
-`lib/data/ledger_repository.dart`.
+It runs standalone against an in-memory repository, so `flutter run` gives you a
+working, populated UI with no backend. `ApiLedgerRepository` swaps in the real
+server through a single provider override.
 
-**Verified:** `flutter analyze` clean, **30 tests passing** on Flutter 3.29 —
-unit tests for money and formatting, widget tests that boot the whole app in
-both writing directions, and 11 golden images.
+**Verified:** `flutter analyze` clean, **149 tests passing** on Flutter 3.29 —
+money and formatting units, an offline outbox and sync engine driven against a
+fake server, widget tests that boot the whole app in both writing directions,
+and 11 golden images.
 
 ## Running
 
@@ -92,7 +94,17 @@ lib/
     └── shell.dart   nav bar + quick-add button
 ```
 
-### One trap worth remembering
+### Three traps worth remembering
+
+**A widget test that touches the network must use `tester.runAsync`.**
+`testWidgets` drives a fake clock; Dio completes its responses on real timers
+that the fake clock never advances, so an `await` on a request never returns.
+It blocks the isolate synchronously — `--timeout` cannot interrupt it, and the
+whole suite appears to freeze rather than one test failing. Anything reaching
+the sync engine, the API client or the local store belongs inside `runAsync`.
+
+**`pumpAndSettle` never returns while `SyncScope` is mounted**, because it holds
+a periodic sync timer. Pump explicit frames instead.
 
 A Flutter `BoxDecoration` **ignores its `color` whenever a `gradient` is set**.
 Setting both — which is easy to do and reads as harmless — silently drops the
