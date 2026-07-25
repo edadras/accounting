@@ -141,7 +141,9 @@ final readonly class QrParser
             throw CaptureException::unrecognisedQr('emv_without_amount');
         }
 
-        /** @var array<string, string> $map */
+        // Same coercion as the tags: '364' is an integer key by the time the
+        // config array exists, and the lookup below is coerced to match.
+        /** @var array<int|string, string> $map */
         $map = (array) config('capture.qr.currency_numeric', []);
         $code = $map[$numeric] ?? null;
 
@@ -173,7 +175,16 @@ final readonly class QrParser
         );
     }
 
-    /** @return array<string, string>|null */
+    /**
+     * The payload split into its tags, or null when it is not well-formed TLV.
+     *
+     * EMV tags are two-digit strings, and PHP turns every one of them that has
+     * no leading zero — '54', '63' — into an integer key on the way in. Reads
+     * with the same literal are coerced identically, so the lookups work; the
+     * key type just has to say so rather than claim they are all strings.
+     *
+     * @return array<int|string, string>|null
+     */
     private function tlv(string $payload): ?array
     {
         $tags = [];
@@ -203,7 +214,7 @@ final readonly class QrParser
         return $offset === $length ? $tags : null;
     }
 
-    /** @param array<string, string> $tags */
+    /** @param array<int|string, string> $tags */
     private function verifyCrc(string $payload, array $tags): void
     {
         $stated = $tags['63'] ?? null;

@@ -13,7 +13,7 @@ final readonly class ReceiptDraft
     /**
      * @param  array<string, array{value: mixed, confidence: float}>  $fields
      * @param  list<array{name: string, quantity: int, unit_price: int, line_total: int}>  $items
-     * @param  array{ok: bool, items_total: int, tax: int, expected_total: int, stated_total: int|null, difference: int}  $arithmetic
+     * @param  array{checked: bool, ok: bool, items_total: int, tax: int, expected_total: int, stated_total: int|null, difference: int, tolerance: int}  $arithmetic
      * @param  list<string>  $warnings
      */
     public function __construct(

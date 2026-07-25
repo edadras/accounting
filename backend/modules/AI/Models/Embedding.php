@@ -36,6 +36,9 @@ final class Embedding extends Model
         'workspace_id', 'owner_type', 'owner_id', 'vector', 'model',
     ];
 
+    /**
+     * @return MorphTo<Model, $this>
+     */
     public function owner(): MorphTo
     {
         return $this->morphTo();
@@ -50,6 +53,9 @@ final class Embedding extends Model
     /**
      * Vectors from two models are not comparable, so every read narrows to one
      * of them. Named rather than inlined so that forgetting is conspicuous.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
      */
     public function scopeForModel(Builder $query, string $model): Builder
     {

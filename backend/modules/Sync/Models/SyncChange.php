@@ -59,6 +59,9 @@ final class SyncChange extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Device, $this>
+     */
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);

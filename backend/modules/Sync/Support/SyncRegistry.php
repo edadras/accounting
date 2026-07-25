@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Support;
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Sync\Contracts\EntityWriter;
 use Modules\Sync\Exceptions\SyncException;
 use Modules\Sync\Writers\AttributeWriter;
 
@@ -77,12 +78,21 @@ final class SyncRegistry
                 throw SyncException::misconfiguredEntity((string) $key, $class);
             }
 
+            $writer = (string) ($definition['writer'] ?? AttributeWriter::class);
+
+            // The writer is handed to the container and asked to write rows, so
+            // it is held to the same standard as the model: a config typo is a
+            // refusal at boot rather than an unknown class at push time.
+            if (! is_a($writer, EntityWriter::class, true)) {
+                throw SyncException::misconfiguredWriter((string) $key, $writer);
+            }
+
             $entities[(string) $key] = new SyncEntity(
                 key: (string) $key,
                 model: $class,
-                fields: array_values((array) ($definition['fields'] ?? [])),
-                financial: array_values((array) ($definition['financial'] ?? [])),
-                writer: (string) ($definition['writer'] ?? AttributeWriter::class),
+                fields: array_values(array_map(strval(...), (array) ($definition['fields'] ?? []))),
+                financial: array_values(array_map(strval(...), (array) ($definition['financial'] ?? []))),
+                writer: $writer,
             );
         }
 

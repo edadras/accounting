@@ -110,8 +110,7 @@ final class NetWorthReport extends Report
         $points = [];
 
         foreach ($periods as $period) {
-            while ($cursor < $deltas->count() && $deltas[$cursor]->day < $period->endExclusive) {
-                $row = $deltas[$cursor];
+            while (($row = $deltas->get($cursor)) !== null && $row->day < $period->endExclusive) {
                 $running[$row->account_id] = ($running[$row->account_id] ?? 0) + $row->delta;
                 $cursor++;
             }

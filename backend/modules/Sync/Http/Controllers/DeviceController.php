@@ -44,12 +44,13 @@ final class DeviceController
         ]);
 
         $userId = $request->user()?->id;
-        $existing = isset($data['id'])
-            ? Device::query()->where('user_id', $userId)->find($data['id'])
+        $deviceId = isset($data['id']) ? (string) $data['id'] : null;
+        $existing = $deviceId !== null
+            ? Device::query()->where('user_id', $userId)->find($deviceId)
             : null;
 
         $attributes = [
-            'platform' => $data['platform'] ?? $existing?->platform ?? 'unknown',
+            'platform' => $data['platform'] ?? $existing->platform ?? 'unknown',
             'name' => $data['name'] ?? $existing?->name,
             'push_token' => $data['push_token'] ?? $existing?->push_token,
             'last_seen_at' => now(),
@@ -66,7 +67,7 @@ final class DeviceController
         }
 
         $device = new Device;
-        $device->fill($attributes + ['id' => $data['id'] ?? null, 'user_id' => $userId]);
+        $device->fill($attributes + ['id' => $deviceId, 'user_id' => $userId]);
         $device->save();
 
         return (new DeviceResource($device))->response()->setStatusCode(201);

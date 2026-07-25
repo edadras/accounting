@@ -6,6 +6,7 @@ namespace Modules\Reports\Models;
 
 use App\Core\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ use Modules\Ledger\Models\Category;
 final class MonthlySummary extends Model
 {
     use BelongsToWorkspace;
+    /** @use HasFactory<Factory<static>> */
     use HasFactory;
     use HasUlidKey;
 
@@ -47,11 +49,17 @@ final class MonthlySummary extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Category, $this>
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
@@ -72,12 +80,21 @@ final class MonthlySummary extends Model
         return $this->income()->minus($this->expense());
     }
 
-    /** The workspace-wide row for a month: no category, no account. */
+    /**
+     * The workspace-wide row for a month: no category, no account.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeWorkspaceGrain(Builder $query): Builder
     {
         return $query->whereNull('category_id')->whereNull('account_id');
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeForPeriod(Builder $query, string $periodKey): Builder
     {
         return $query->where('period_key', $periodKey);

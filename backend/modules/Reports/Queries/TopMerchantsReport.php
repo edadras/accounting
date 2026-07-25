@@ -35,18 +35,19 @@ final class TopMerchantsReport extends Report
         $unlabelledCount = 0;
 
         foreach ($this->dailyTotals($this->flowQuery($range, $type), ['payee']) as $row) {
-            $payee = $row->payee === null ? '' : trim((string) $row->payee);
+            $raw = $row['group']['payee'] ?? null;
+            $payee = $raw === null ? '' : trim((string) $raw);
 
             if ($payee === '') {
-                $unlabelledTotal += $row->total;
-                $unlabelledCount += $row->transactions;
+                $unlabelledTotal += $row['total'];
+                $unlabelledCount += $row['transactions'];
 
                 continue;
             }
 
             $merchants[$payee] ??= ['total' => 0, 'transaction_count' => 0];
-            $merchants[$payee]['total'] += $row->total;
-            $merchants[$payee]['transaction_count'] += $row->transactions;
+            $merchants[$payee]['total'] += $row['total'];
+            $merchants[$payee]['transaction_count'] += $row['transactions'];
         }
 
         $labelledTotal = array_sum(array_column($merchants, 'total'));

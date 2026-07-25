@@ -32,6 +32,12 @@ use Modules\Documents\Models\Document;
  * secret is checked before this action is reached, and the recipient address —
  * not anything in the message — decides whose books it lands in. Between them
  * they are the reason a stranger cannot mail a receipt into your ledger.
+ *
+ * @phpstan-type EmailPayload array{
+ *   to: string, from?: string|null, subject?: string|null, text?: string|null,
+ *   message_id?: string|null, received_at?: string|null,
+ *   attachments?: list<array{filename?: string, content_type?: string|null, content?: string}>
+ * }
  */
 final readonly class CaptureEmail
 {
@@ -43,16 +49,12 @@ final readonly class CaptureEmail
         private AuditRecorder $audit,
     ) {}
 
-    /**
-     * @param array{
-     *   to: string, from?: string|null, subject?: string|null, text?: string|null,
-     *   message_id?: string|null, received_at?: string|null,
-     *   attachments?: list<array{filename?: string, content_type?: string|null, content?: string}>
-     * } $payload
-     */
+    /** @param EmailPayload $payload */
     public function handle(array $payload): CaptureMessage
     {
-        $to = (string) ($payload['to'] ?? '');
+        // The recipient decides whose books this lands in, and it is the one
+        // field the webhook always requires; resolve() is what refuses it.
+        $to = $payload['to'];
         $routed = InboxAddress::resolve($to);
 
         if ($routed === null) {
@@ -65,7 +67,7 @@ final readonly class CaptureEmail
         );
     }
 
-    /** @param array<string, mixed> $payload */
+    /** @param EmailPayload $payload */
     private function ingest(Workspace $workspace, IngestAlias $alias, string $to, array $payload): CaptureMessage
     {
         $from = $this->string($payload['from'] ?? null);
@@ -102,7 +104,7 @@ final readonly class CaptureEmail
             'reason' => 'pending',
         ]));
 
-        $receipts = $this->storeAttachments($workspace, $message, (array) ($payload['attachments'] ?? []));
+        $receipts = $this->storeAttachments($workspace, $message, $payload['attachments'] ?? []);
 
         $alias->forceFill(['last_message_at' => $receivedAt])->save();
 

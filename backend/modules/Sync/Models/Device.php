@@ -38,11 +38,17 @@ final class Device extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return HasMany<SyncChange, $this>
+     */
     public function changes(): HasMany
     {
         return $this->hasMany(SyncChange::class);
@@ -53,6 +59,10 @@ final class Device extends Model
         return $this->revoked_at !== null;
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNull('revoked_at');

@@ -101,7 +101,11 @@ final class ArabicShaper
 
     private const TATWEEL = 0x0640;
 
-    /** The half-space: it separates two letters that would otherwise join. */
+    /**
+     * The half-space: it separates two letters that would otherwise join, so
+     * neither side of it may take a connected form. «نیم‌فاصله» is two joined
+     * pieces, not one word.
+     */
     private const ZWNJ = 0x200C;
 
     private const ZWJ = 0x200D;
@@ -333,7 +337,9 @@ final class ArabicShaper
             $i = $end;
         }
 
-        return $classes;
+        // Every write above lands on an index that was already there, so this
+        // only restates that the classes still line up with the codepoints.
+        return array_values($classes);
     }
 
     /** @param  list<int>  $codepoints */
@@ -359,17 +365,19 @@ final class ArabicShaper
     /** True when the letter before this one can connect to it. */
     private static function joinsForward(int $codepoint): bool
     {
-        return $codepoint === self::TATWEEL
-            || $codepoint === self::ZWJ
-            || (isset(self::FORMS[$codepoint]) && count(self::FORMS[$codepoint]) === 4);
+        return $codepoint !== self::ZWNJ
+            && ($codepoint === self::TATWEEL
+                || $codepoint === self::ZWJ
+                || (isset(self::FORMS[$codepoint]) && count(self::FORMS[$codepoint]) === 4));
     }
 
     /** True when this letter can take a final or medial form. */
     private static function joinsBackward(int $codepoint): bool
     {
-        return $codepoint === self::TATWEEL
-            || $codepoint === self::ZWJ
-            || (isset(self::FORMS[$codepoint]) && count(self::FORMS[$codepoint]) > 1);
+        return $codepoint !== self::ZWNJ
+            && ($codepoint === self::TATWEEL
+                || $codepoint === self::ZWJ
+                || (isset(self::FORMS[$codepoint]) && count(self::FORMS[$codepoint]) > 1));
     }
 
     /**
@@ -419,14 +427,26 @@ final class ArabicShaper
         ], true);
     }
 
+    /** A Unicode scalar value: in range, and not one half of a surrogate pair. */
+    private static function isEncodable(int $codepoint): bool
+    {
+        return $codepoint >= 0
+            && $codepoint <= 0x10FFFF
+            && ($codepoint < 0xD800 || $codepoint > 0xDFFF);
+    }
+
     /** @return list<int> */
     private static function toCodepoints(string $text): array
     {
         $codepoints = [];
 
         foreach (mb_str_split($text, 1, 'UTF-8') as $character) {
-            $codepoint = mb_ord($character, 'UTF-8');
-            $codepoints[] = $codepoint === false ? 0xFFFD : $codepoint;
+            // A byte sequence that is not valid UTF-8 has no code point at all
+            // — mb_ord answers false for it — so it becomes the replacement
+            // character and the rest of the string stays shapeable.
+            $codepoints[] = mb_check_encoding($character, 'UTF-8')
+                ? mb_ord($character, 'UTF-8')
+                : 0xFFFD;
         }
 
         return $codepoints;
@@ -438,8 +458,12 @@ final class ArabicShaper
         $text = '';
 
         foreach ($codepoints as $codepoint) {
-            $character = mb_chr($codepoint, 'UTF-8');
-            $text .= $character === false ? '' : $character;
+            // Anything outside Unicode, and either half of a surrogate pair,
+            // has no UTF-8 encoding; mb_chr would answer false and the
+            // character is dropped rather than written as a literal "false".
+            if (self::isEncodable($codepoint)) {
+                $text .= mb_chr($codepoint, 'UTF-8');
+            }
         }
 
         return $text;

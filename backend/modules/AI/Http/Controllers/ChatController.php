@@ -21,7 +21,7 @@ final class ChatController
         // Resolved through the scoped model, so a conversation id belonging to
         // another workspace is simply not found.
         $conversation = isset($data['conversation_id'])
-            ? AiConversation::query()->findOrFail($data['conversation_id'])
+            ? AiConversation::query()->findOrFail((string) $data['conversation_id'])
             : null;
 
         return response()->json([

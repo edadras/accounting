@@ -47,7 +47,10 @@ final class ReportTableFactory
         );
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function cashFlow(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -80,7 +83,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function trend(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -108,7 +114,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function netWorth(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -130,7 +139,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function topCategories(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -164,7 +176,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function topMerchants(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -193,7 +208,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function topAccounts(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -225,7 +243,10 @@ final class ReportTableFactory
         ]];
     }
 
-    /** @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>} */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0:list<Column>,1:list<array<string,mixed>>,2:list<array{label:string,value:string}>}
+     */
     private function categoryBreakdown(array $data, ExportLocale $locale): array
     {
         $columns = [
@@ -321,7 +342,10 @@ final class ReportTableFactory
         return Money::of((int) $view['value'], (string) $view['currency']);
     }
 
-    /** @return array{label:string,value:string} */
+    /**
+     * @param  array{value:int,currency:string}|null  $view
+     * @return array{label:string,value:string}
+     */
     private function summaryMoney(string $key, ?array $view, ExportLocale $locale): array
     {
         return [

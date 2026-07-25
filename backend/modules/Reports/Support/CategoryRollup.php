@@ -57,7 +57,10 @@ final class CategoryRollup
             ];
         }
 
-        $segments = array_values(array_filter(explode('/', (string) $category->path), 'strlen'));
+        $segments = array_values(array_filter(
+            explode('/', (string) $category->path),
+            static fn (string $segment): bool => $segment !== '',
+        ));
         $kept = array_slice($segments, 0, max(1, $depth));
         $path = '/'.implode('/', $kept);
 
@@ -67,7 +70,7 @@ final class CategoryRollup
             'key' => $path,
             'category_id' => $ancestor?->id,
             'path' => $path,
-            'name' => $ancestor?->name ?? (string) end($kept),
+            'name' => $ancestor->name ?? (string) end($kept),
             'depth' => count($kept),
         ];
     }

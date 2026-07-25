@@ -76,21 +76,33 @@ final class CaptureMessage extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<AiDraft, $this>
+     */
     public function draft(): BelongsTo
     {
         return $this->belongsTo(AiDraft::class, 'ai_draft_id');
     }
 
+    /**
+     * @return BelongsTo<Transaction, $this>
+     */
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class);
     }
 
+    /**
+     * @return BelongsTo<IngestAlias, $this>
+     */
     public function alias(): BelongsTo
     {
         return $this->belongsTo(IngestAlias::class, 'ingest_alias_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -101,6 +113,10 @@ final class CaptureMessage extends Model
         return self::TRANSACTION_SOURCES[$this->channel] ?? 'manual';
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeOnChannel(Builder $query, string $channel): Builder
     {
         return $query->where('channel', $channel);

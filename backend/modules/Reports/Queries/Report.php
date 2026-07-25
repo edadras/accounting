@@ -42,6 +42,8 @@ abstract class Report
      *
      * The workspace global scope supplies the tenant filter — this query is
      * never allowed to reach across workspaces.
+     *
+     * @return Builder<Transaction>
      */
     protected function flowQuery(DateRange $range, ?string $type = null): Builder
     {
@@ -61,8 +63,14 @@ abstract class Report
      * PHP: `DATE()` is the one date function MySQL and SQLite agree on, and a
      * year of days is a few hundred rows.
      *
+     * The columns a report grouped by are kept together under `group` rather
+     * than sitting beside the totals: which of them a row carries depends on
+     * what the caller asked for, so they cannot be named in the row's type,
+     * and the totals stay typed as the integers the arithmetic needs.
+     *
+     * @param  Builder<Transaction>  $query
      * @param  list<string>  $groupBy
-     * @return Collection<int, object{day:string,total:int,transactions:int}>
+     * @return Collection<int, array{day: string, total: int, transactions: int, group: array<string, mixed>}>
      */
     protected function dailyTotals(Builder $query, array $groupBy = []): Collection
     {
@@ -73,17 +81,19 @@ abstract class Report
             ->selectRaw(implode(', ', $columns).', SUM(base_amount) as total, COUNT(*) as transactions')
             ->groupByRaw(implode(', ', $grouping))
             ->get()
-            ->map(function (Transaction $row) use ($groupBy): object {
-                $values = ['day' => (string) $row->getAttribute('day')];
+            ->map(function (Transaction $row) use ($groupBy): array {
+                $group = [];
 
                 foreach ($groupBy as $column) {
-                    $values[$column] = $row->getAttribute($column);
+                    $group[$column] = $row->getAttribute($column);
                 }
 
-                $values['total'] = (int) $row->getAttribute('total');
-                $values['transactions'] = (int) $row->getAttribute('transactions');
-
-                return (object) $values;
+                return [
+                    'day' => (string) $row->getAttribute('day'),
+                    'total' => (int) $row->getAttribute('total'),
+                    'transactions' => (int) $row->getAttribute('transactions'),
+                    'group' => $group,
+                ];
             });
     }
 

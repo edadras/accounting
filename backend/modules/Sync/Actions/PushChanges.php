@@ -108,14 +108,14 @@ final readonly class PushChanges
                 SyncChange::OP_DELETE => $write(SyncChange::APPLIED, $baseVersion),
                 SyncChange::OP_CREATE => $write(
                     SyncChange::APPLIED,
-                    (int) $entity->writerInstance()->create($entity, $id, $payload, 1)->version,
+                    EntityPayload::versionOf($entity->writerInstance()->create($entity, $id, $payload, 1)),
                 ),
                 default => $write(SyncChange::CONFLICT, 0, 'entity_missing'),
             };
         }
 
-        $serverVersion = (int) ($record->version ?? 0);
-        $trashed = $entity->isSoftDeletable() && $record->trashed();
+        $serverVersion = EntityPayload::versionOf($record);
+        $trashed = $entity->isSoftDeletable() && $record->getAttribute('deleted_at') !== null;
 
         if ($trashed) {
             // Deleted here, edited there. The delete does not silently win; the
@@ -212,18 +212,21 @@ final readonly class PushChanges
     private function clientIsNewer(Model $record, array $payload): bool
     {
         $claimed = $payload['updated_at'] ?? null;
+        $serverUpdatedAt = EntityPayload::timestampOf($record, 'updated_at');
 
-        if ($claimed === null || $record->updated_at === null) {
+        // No usable stamp on either side and the client's write stands: the
+        // alternative is discarding an edit because a timestamp was missing.
+        if (! is_string($claimed) || $serverUpdatedAt === null) {
             return true;
         }
 
         try {
-            $claimedAt = new \DateTimeImmutable((string) $claimed);
+            $claimedAt = new \DateTimeImmutable($claimed);
         } catch (\Exception) {
             return true;
         }
 
-        return $claimedAt->getTimestamp() >= $record->updated_at->getTimestamp();
+        return $claimedAt->getTimestamp() >= $serverUpdatedAt->getTimestamp();
     }
 
     /**

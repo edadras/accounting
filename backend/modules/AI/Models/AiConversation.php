@@ -25,11 +25,17 @@ final class AiConversation extends Model
         return ['last_message_at' => 'datetime'];
     }
 
+    /**
+     * @return HasMany<AiMessage, $this>
+     */
     public function messages(): HasMany
     {
         return $this->hasMany(AiMessage::class, 'conversation_id')->orderBy('created_at');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

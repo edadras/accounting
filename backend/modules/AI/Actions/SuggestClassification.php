@@ -37,7 +37,9 @@ final readonly class SuggestClassification
             return null;
         }
 
-        $candidates = Category::query()
+        // A JSON array, not an object: the block is a numbered list of choices
+        // and the model is asked to pick one, so the keys carry no meaning.
+        $candidates = array_values(Category::query()
             ->whereIn('type', [$type, 'both'])
             ->orderBy('depth')
             ->limit(self::CATEGORY_CANDIDATES)
@@ -46,7 +48,7 @@ final readonly class SuggestClassification
                 'id' => $category->id,
                 'name' => $category->name,
                 'path' => $category->path,
-            ])->all();
+            ])->all());
 
         if ($candidates === []) {
             return null;

@@ -44,7 +44,7 @@ final class HttpEmbeddingProvider implements EmbeddingProvider
     {
         $inputs = array_map(
             static fn (string $text): string => TextNormalizerBridge::normalize($text),
-            array_values($texts),
+            $texts,
         );
 
         if ($inputs === []) {

@@ -45,8 +45,8 @@ final class MediaDraftController
             'document_id' => ['required', 'string', 'max:64'],
         ]);
 
-        $document = Document::query()->findOrFail($data['document_id']);
-        $path = Storage::disk((string) $document->disk)->path((string) $document->path);
+        $document = Document::query()->findOrFail((string) $data['document_id']);
+        $path = Storage::disk($document->disk)->path($document->path);
 
         if (! is_readable($path)) {
             throw AiException::fileNotReadable($path);

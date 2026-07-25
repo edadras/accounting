@@ -123,7 +123,10 @@ final class ReceiptTextParser
         ];
     }
 
-    /** @param list<array{raw: string, folded: string, lower: string}> $lines */
+    /**
+     * @param  list<array{raw: string, folded: string, lower: string}>  $lines
+     * @return array{value: string|null, confidence: float}
+     */
     private static function merchant(array $lines): array
     {
         foreach ($lines as $line) {
@@ -139,7 +142,10 @@ final class ReceiptTextParser
         return ['value' => null, 'confidence' => 0.0];
     }
 
-    /** @param list<array{raw: string, folded: string, lower: string}> $lines */
+    /**
+     * @param  list<array{raw: string, folded: string, lower: string}>  $lines
+     * @return array{value: string|null, confidence: float}
+     */
     private static function date(array $lines, ?CarbonImmutable $now): array
     {
         foreach ($lines as $line) {

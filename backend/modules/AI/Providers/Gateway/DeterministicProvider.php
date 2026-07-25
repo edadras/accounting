@@ -609,7 +609,7 @@ final class DeterministicProvider implements AiProvider
 
     private function locale(): string
     {
-        return $this->context->get()?->locale ?? 'en';
+        return $this->context->get()->locale ?? 'en';
     }
 
     /** @param array<string, mixed> $payload */

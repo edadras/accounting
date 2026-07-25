@@ -47,6 +47,16 @@ final class SyncException extends RuntimeException
         );
     }
 
+    public static function misconfiguredWriter(string $entity, string $class): self
+    {
+        return new self(
+            'misconfigured_writer',
+            "Entity [{$entity}] is mapped to writer [{$class}], which is not an entity writer.",
+            500,
+            ['entity' => $entity],
+        );
+    }
+
     /** @param  list<string>  $missing */
     public static function incompletePayload(string $entity, array $missing): self
     {

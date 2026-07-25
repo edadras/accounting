@@ -34,11 +34,11 @@ final class TopAccountsReport extends Report
         $accounts = [];
 
         foreach ($this->dailyTotals($this->flowQuery($range, $type), ['account_id']) as $row) {
-            $id = (string) $row->account_id;
+            $id = (string) ($row['group']['account_id'] ?? '');
 
             $accounts[$id] ??= ['total' => 0, 'transaction_count' => 0];
-            $accounts[$id]['total'] += $row->total;
-            $accounts[$id]['transaction_count'] += $row->transactions;
+            $accounts[$id]['total'] += $row['total'];
+            $accounts[$id]['transaction_count'] += $row['transactions'];
         }
 
         $total = array_sum(array_column($accounts, 'total'));

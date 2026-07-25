@@ -87,16 +87,18 @@ final class TopCategoriesReport extends Report
         $buckets = [];
 
         foreach ($this->dailyTotals($this->flowQuery($range, $type), ['category_id']) as $row) {
+            $categoryId = $row['group']['category_id'] ?? null;
+
             $bucket = $rollup->bucketFor(
-                $row->category_id === null ? null : (string) $row->category_id,
+                $categoryId === null ? null : (string) $categoryId,
                 $depth,
             );
 
             $key = $bucket['key'];
 
             $buckets[$key] ??= [...$bucket, 'total' => 0, 'transaction_count' => 0];
-            $buckets[$key]['total'] += $row->total;
-            $buckets[$key]['transaction_count'] += $row->transactions;
+            $buckets[$key]['total'] += $row['total'];
+            $buckets[$key]['transaction_count'] += $row['transactions'];
         }
 
         return array_values($buckets);

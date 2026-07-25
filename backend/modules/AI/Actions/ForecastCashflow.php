@@ -119,7 +119,7 @@ final readonly class ForecastCashflow
                 ->get();
 
             foreach ($installments as $installment) {
-                $currency = (string) ($installment->loan?->currency ?? $base->code);
+                $currency = (string) ($installment->loan->currency ?? $base->code);
                 $total = $total->plus($this->toBase($installment->remaining(), $currency, $base));
             }
         }

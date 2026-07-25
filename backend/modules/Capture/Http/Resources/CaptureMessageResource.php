@@ -23,7 +23,7 @@ final class CaptureMessageResource extends JsonResource
             'status' => $this->status,
             'sender' => $this->sender,
             'subject' => $this->subject,
-            'received_at' => $this->received_at?->toIso8601String(),
+            'received_at' => $this->received_at->toIso8601String(),
             'matched_pattern' => $this->matched_pattern,
             'reason' => $this->reason,
             'parsed' => $this->parsed,

@@ -62,7 +62,9 @@ final class RelativeDateResolver
                 continue;
             }
 
-            $groups = array_map(static fn (array $group) => (string) $group[0], $m);
+            // No pattern above uses a named group, so the matches are already
+            // positional; array_values states that for the resolver's benefit.
+            $groups = array_values(array_map(static fn (array $group) => (string) $group[0], $m));
             $date = $resolver($now, $groups);
 
             if ($date === null) {

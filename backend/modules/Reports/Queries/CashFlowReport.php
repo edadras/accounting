@@ -33,15 +33,15 @@ final class CashFlowReport extends Report
         }
 
         foreach ($this->dailyTotals($this->flowQuery($range), ['type']) as $row) {
-            $key = $this->bucketKeyForDay($row->day, $bucket);
+            $key = $this->bucketKeyForDay($row['day'], $bucket);
 
             if (! isset($totals[$key])) {
                 continue;
             }
 
-            $field = $row->type === Transaction::TYPE_INCOME ? 'income' : 'expense';
-            $totals[$key][$field] += $row->total;
-            $totals[$key]['transactions'] += $row->transactions;
+            $field = ($row['group']['type'] ?? null) === Transaction::TYPE_INCOME ? 'income' : 'expense';
+            $totals[$key][$field] += $row['total'];
+            $totals[$key]['transactions'] += $row['transactions'];
         }
 
         $rows = [];

@@ -56,10 +56,13 @@ final class OpenAiProvider implements AiProvider
 
         $body = $this->post('chat/completions', $payload);
         $message = $body['choices'][0]['message'] ?? [];
+        $rawToolCalls = is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : [];
 
         return new AiResponse(
             content: (string) ($message['content'] ?? ''),
-            toolCalls: $this->toolCalls(is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : []),
+            // Decoded JSON keeps whatever keys the model sent; only the values
+            // are ever read, so the calls are taken in order.
+            toolCalls: $this->toolCalls(array_values($rawToolCalls)),
             model: (string) ($body['model'] ?? ''),
             usage: is_array($body['usage'] ?? null) ? $body['usage'] : [],
         );

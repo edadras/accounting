@@ -93,13 +93,13 @@ final class GetUpcomingObligations implements Tool
                 ->get();
 
             foreach ($installments as $installment) {
-                $currency = (string) ($installment->loan?->currency ?? $base->code);
+                $currency = (string) ($installment->loan->currency ?? $base->code);
                 $remaining = $installment->remaining();
 
                 $rows[] = [
                     'kind' => 'installment',
                     'id' => $installment->id,
-                    'title' => trim((string) ($installment->loan?->title ?? 'loan')).' #'.$installment->number,
+                    'title' => trim((string) ($installment->loan->title ?? 'loan')).' #'.$installment->number,
                     'direction' => 'issued',
                     'due_date' => $installment->due_date->toDateString(),
                     'overdue' => $installment->due_date->lessThan($now),

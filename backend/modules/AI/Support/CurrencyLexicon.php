@@ -121,7 +121,7 @@ final class CurrencyLexicon
     public static function tomanRialFactor(?Workspace $workspace): int
     {
         $key = (string) config('ai.toman.workspace_setting_key', 'ai.toman_rial_factor');
-        $configured = data_get($workspace?->settings ?? [], $key);
+        $configured = data_get($workspace->settings ?? [], $key);
 
         if (is_numeric($configured) && (int) $configured > 0) {
             return (int) $configured;

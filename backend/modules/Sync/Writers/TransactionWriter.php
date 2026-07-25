@@ -41,9 +41,9 @@ final class TransactionWriter extends AttributeWriter
             throw SyncException::incompletePayload($entity->key, $missing);
         }
 
-        $transaction = $this->ledger->handle(['id' => $id] + $attributes);
+        $transaction = $this->ledger->handle($this->ledgerPayload($entity, $id, $attributes));
 
-        if ((int) $transaction->version !== $version) {
+        if ($transaction->version !== $version) {
             $transaction->version = $version;
             $transaction->save();
         }
@@ -53,9 +53,10 @@ final class TransactionWriter extends AttributeWriter
 
     public function update(SyncEntity $entity, Model $model, array $attributes, int $version): Model
     {
-        $previousAccountIds = $this->accountIds($model);
+        $transaction = $this->transaction($entity, $model);
+        $previousAccountIds = $this->accountIds($transaction);
 
-        $transaction = parent::update($entity, $model, $this->withBaseAmount($model, $attributes), $version);
+        parent::update($entity, $transaction, $this->withBaseAmount($transaction, $attributes), $version);
 
         $this->restampEntries($transaction, $previousAccountIds);
         $this->recalculate([...$previousAccountIds, ...$this->accountIds($transaction)]);
@@ -65,15 +66,104 @@ final class TransactionWriter extends AttributeWriter
 
     public function delete(SyncEntity $entity, Model $model, int $version): void
     {
-        $accountIds = $this->accountIds($model);
+        $transaction = $this->transaction($entity, $model);
+        $accountIds = $this->accountIds($transaction);
 
         // Mirrors the REST delete: the postings go with the transaction,
         // otherwise the balances keep counting money that is no longer there.
-        $model->entries()->delete();
+        $transaction->entries()->delete();
 
-        parent::delete($entity, $model, $version);
+        parent::delete($entity, $transaction, $version);
 
         $this->recalculate($accountIds);
+    }
+
+    /**
+     * This writer only knows how to keep a transaction's postings in step, so a
+     * registry entry that points anything else at it is a configuration error
+     * and not something to improvise around.
+     */
+    private function transaction(SyncEntity $entity, Model $model): Transaction
+    {
+        return $model instanceof Transaction
+            ? $model
+            : throw SyncException::misconfiguredEntity($entity->key, $model::class);
+    }
+
+    /**
+     * The ledger's own payload, built field by field.
+     *
+     * RecordTransaction re-derives the base amount, the base currency and the
+     * rate itself, so what the device sent for those is deliberately not passed
+     * on; spelling the shape out also keeps a payload from reaching a ledger
+     * field the registry never listed.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array{
+     *   id: string,
+     *   type: string,
+     *   account_id: string,
+     *   counter_account_id: string|null,
+     *   category_id: string|null,
+     *   amount: int,
+     *   currency: string,
+     *   fx_rate: string|null,
+     *   occurred_at: \DateTimeInterface|string|null,
+     *   description: string|null,
+     *   notes: string|null,
+     *   payee: string|null,
+     *   reference: string|null,
+     *   tags: array<string>|null,
+     *   source: string,
+     * }
+     */
+    private function ledgerPayload(SyncEntity $entity, string $id, array $attributes): array
+    {
+        $amount = $attributes['amount'] ?? null;
+        $occurredAt = $attributes['occurred_at'] ?? null;
+        $tags = $attributes['tags'] ?? null;
+
+        return [
+            'id' => $id,
+            'type' => $this->required($entity, $attributes, 'type'),
+            'account_id' => $this->required($entity, $attributes, 'account_id'),
+            'counter_account_id' => self::text($attributes['counter_account_id'] ?? null),
+            'category_id' => self::text($attributes['category_id'] ?? null),
+            'amount' => is_numeric($amount)
+                ? (int) $amount
+                : throw SyncException::incompletePayload($entity->key, ['amount']),
+            'currency' => $this->required($entity, $attributes, 'currency'),
+            'fx_rate' => self::text($attributes['fx_rate'] ?? null),
+            'occurred_at' => $occurredAt instanceof \DateTimeInterface ? $occurredAt : self::text($occurredAt),
+            'description' => self::text($attributes['description'] ?? null),
+            'notes' => self::text($attributes['notes'] ?? null),
+            'payee' => self::text($attributes['payee'] ?? null),
+            'reference' => self::text($attributes['reference'] ?? null),
+            'tags' => is_array($tags) ? array_values(array_filter($tags, is_string(...))) : null,
+            'source' => self::text($attributes['source'] ?? null) ?? 'manual',
+        ];
+    }
+
+    /**
+     * A field RecordTransaction cannot post without. REQUIRED_ON_CREATE has
+     * already established it is there; this establishes it is a scalar, because
+     * a nested array would have passed that check just as happily.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function required(SyncEntity $entity, array $attributes, string $field): string
+    {
+        $value = self::text($attributes[$field] ?? null);
+
+        return $value !== null && $value !== ''
+            ? $value
+            : throw SyncException::incompletePayload($entity->key, [$field]);
+    }
+
+    /** A wire value read back as text, or null when it is not one. */
+    private static function text(mixed $value): ?string
+    {
+        return is_scalar($value) ? (string) $value : null;
     }
 
     /**
@@ -84,17 +174,17 @@ final class TransactionWriter extends AttributeWriter
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
-    private function withBaseAmount(Model $model, array $attributes): array
+    private function withBaseAmount(Transaction $transaction, array $attributes): array
     {
         if (! array_key_exists('amount', $attributes) || array_key_exists('base_amount', $attributes)) {
             return $attributes;
         }
 
-        $currency = (string) ($attributes['currency'] ?? $model->currency);
-        $rate = (string) ($attributes['fx_rate'] ?? $model->fx_rate);
+        $currency = self::text($attributes['currency'] ?? null) ?? $transaction->currency;
+        $rate = self::text($attributes['fx_rate'] ?? null) ?? $transaction->fx_rate;
 
         $attributes['base_amount'] = Money::of((int) $attributes['amount'], $currency)
-            ->convertTo(Currency::of((string) $model->base_currency), $rate)
+            ->convertTo(Currency::of($transaction->base_currency), $rate)
             ->minorUnits;
 
         return $attributes;
@@ -128,9 +218,12 @@ final class TransactionWriter extends AttributeWriter
     }
 
     /** @return list<string> */
-    private function accountIds(Model $model): array
+    private function accountIds(Transaction $transaction): array
     {
-        return array_values(array_filter([$model->account_id, $model->counter_account_id]));
+        return array_values(array_filter(
+            [$transaction->account_id, $transaction->counter_account_id],
+            static fn (?string $id): bool => $id !== null && $id !== '',
+        ));
     }
 
     /** @param  list<string>  $accountIds */

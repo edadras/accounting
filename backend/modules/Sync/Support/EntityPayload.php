@@ -32,10 +32,32 @@ final class EntityPayload
 
         return $payload + [
             'id' => (string) $model->getKey(),
-            'version' => (int) ($model->version ?? 0),
-            'updated_at' => self::wire($model->updated_at),
+            'version' => self::versionOf($model),
+            'updated_at' => self::wire(self::timestampOf($model, 'updated_at')),
             'deleted_at' => self::wire($model->getAttribute('deleted_at')),
         ];
+    }
+
+    /**
+     * The sync version a record carries.
+     *
+     * Read through `getAttribute` because the registry holds a bare model class:
+     * a row written before the column existed, or a model that never had one,
+     * counts as version 0 rather than blowing up mid-batch.
+     */
+    public static function versionOf(Model $model): int
+    {
+        $version = $model->getAttribute('version');
+
+        return is_numeric($version) ? (int) $version : 0;
+    }
+
+    /** A timestamp column read back as a date, or null when the row carries none. */
+    public static function timestampOf(Model $model, string $column): ?DateTimeInterface
+    {
+        $value = $model->getAttribute($column);
+
+        return $value instanceof DateTimeInterface ? $value : null;
     }
 
     /** JSON-safe representation of a single attribute. */
@@ -58,7 +80,8 @@ final class EntityPayload
     {
         return match (true) {
             $value === null => null,
-            $value instanceof DateTimeInterface => (clone $value)->setTimezone(new \DateTimeZone('UTC'))
+            $value instanceof DateTimeInterface => \DateTimeImmutable::createFromInterface($value)
+                ->setTimezone(new \DateTimeZone('UTC'))
                 ->format('Y-m-d H:i:s'),
             is_bool($value) => $value ? '1' : '0',
             is_array($value) => self::canonical($value),

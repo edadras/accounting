@@ -57,28 +57,34 @@ final class LocalEmbeddingProvider implements EmbeddingProvider
     public function embed(string $text): array
     {
         $dimensions = $this->dimensions();
-        $vector = array_fill(0, $dimensions, 0.0);
-
         $normalized = TextNormalizerBridge::normalize($text);
 
         if ($normalized === '') {
-            return $vector;
+            return array_fill(0, $dimensions, 0.0);
         }
 
+        // Only the buckets a feature actually lands in are carried around; the
+        // dense vector is laid out once at the end, which is also the only
+        // place its length is decided.
+        $buckets = [];
+
         foreach ($this->tokens($normalized) as $token) {
-            $this->add($vector, 'w:'.$token, 1.0);
+            $this->add($buckets, $dimensions, 'w:'.$token, 1.0);
         }
 
         foreach (ConceptLexicon::conceptsIn($normalized) as $concept => $weight) {
-            $this->add($vector, 'c:'.$concept, self::CONCEPT_WEIGHT * $weight);
+            $this->add($buckets, $dimensions, 'c:'.$concept, self::CONCEPT_WEIGHT * $weight);
         }
 
-        return Vector::normalize($vector);
+        return Vector::normalize(array_map(
+            static fn (int $index): float => $buckets[$index] ?? 0.0,
+            range(0, $dimensions - 1),
+        ));
     }
 
     public function embedBatch(array $texts): array
     {
-        return array_map(fn (string $text): array => $this->embed($text), array_values($texts));
+        return array_map(fn (string $text): array => $this->embed($text), $texts);
     }
 
     /**
@@ -96,12 +102,16 @@ final class LocalEmbeddingProvider implements EmbeddingProvider
         ));
     }
 
-    /** @param list<float> $vector */
-    private function add(array &$vector, string $feature, float $weight): void
+    /**
+     * Adds one signed feature to the bucket it hashes into.
+     *
+     * @param  array<int, float>  $buckets
+     */
+    private function add(array &$buckets, int $dimensions, string $feature, float $weight): void
     {
-        $bucket = crc32($feature) % count($vector);
+        $bucket = crc32($feature) % $dimensions;
         $sign = (crc32('sign:'.$feature) & 1) === 1 ? 1.0 : -1.0;
 
-        $vector[$bucket] += $sign * $weight;
+        $buckets[$bucket] = ($buckets[$bucket] ?? 0.0) + $sign * $weight;
     }
 }

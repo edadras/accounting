@@ -51,10 +51,9 @@ final readonly class ExtractReceipt
             ? Currency::of($currencyCode)
             : Currency::of((string) $workspace->base_currency);
 
-        $items = array_values(array_filter(
-            (array) ($fields['items']['value'] ?? []),
-            static fn (mixed $item): bool => is_array($item),
-        ));
+        // Already a list of shaped line items: every provider normalises the
+        // model's JSON into the contract's shape before it gets here.
+        $items = $fields['items']['value'] ?? [];
 
         $tax = (int) ($fields['tax']['value'] ?? 0);
         $stated = $fields['total']['value'] ?? null;

@@ -178,7 +178,7 @@ final readonly class AnswerQuestion
      */
     private function sources(array $executed): array
     {
-        return array_values(array_map(static function (array $outcome): array {
+        return array_map(static function (array $outcome): array {
             $result = is_array($outcome['result'] ?? null) ? $outcome['result'] : [];
 
             return array_filter([
@@ -188,6 +188,6 @@ final readonly class AnswerQuestion
                 'count' => $result['transaction_count'] ?? $result['count'] ?? null,
                 'arguments' => $outcome['arguments'] ?? [],
             ], static fn (mixed $value) => $value !== null);
-        }, $executed));
+        }, $executed);
     }
 }

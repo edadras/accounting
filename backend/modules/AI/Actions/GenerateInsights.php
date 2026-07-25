@@ -62,7 +62,11 @@ final readonly class GenerateInsights
         return $insights;
     }
 
-    /** «۸۲٪ هزینه‌های شما مربوط به غذاست.» @return array<string, mixed>|null */
+    /**
+     * «۸۲٪ هزینه‌های شما مربوط به غذاست.»
+     *
+     * @return array<string, mixed>|null
+     */
     private function composition(CarbonImmutable $now): ?array
     {
         $result = $this->summary->run([
@@ -102,7 +106,11 @@ final readonly class GenerateInsights
         ];
     }
 
-    /** «این ماه ۱۵٪ کمتر خرج کرده‌اید.» @return array<string, mixed>|null */
+    /**
+     * «این ماه ۱۵٪ کمتر خرج کرده‌اید.»
+     *
+     * @return array<string, mixed>|null
+     */
     private function periodChange(CarbonImmutable $now): ?array
     {
         $previousMonth = $now->subMonthNoOverflow();
@@ -179,6 +187,11 @@ final readonly class GenerateInsights
             }
 
             $candidate = $group->sortByDesc('base_amount')->first();
+
+            if ($candidate === null) {
+                continue;
+            }
+
             $baseline = $group->reject(fn (Transaction $row) => $row->id === $candidate->id)
                 ->pluck('base_amount')
                 ->map(static fn (mixed $value) => (int) $value)
@@ -232,7 +245,11 @@ final readonly class GenerateInsights
         return $insights;
     }
 
-    /** «اگر همین روند ادامه پیدا کند تا پایان ماه ۲۵۰ دلار کمبود خواهید داشت.» @return array<string, mixed>|null */
+    /**
+     * «اگر همین روند ادامه پیدا کند تا پایان ماه ۲۵۰ دلار کمبود خواهید داشت.»
+     *
+     * @return array<string, mixed>|null
+     */
     private function cashflow(CarbonImmutable $now): ?array
     {
         $days = (int) $now->diffInDays($now->endOfMonth(), absolute: true);

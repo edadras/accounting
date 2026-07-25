@@ -22,7 +22,7 @@ final class AiSwitch
             return false;
         }
 
-        $setting = data_get($workspace?->settings ?? [], 'ai.enabled');
+        $setting = data_get($workspace->settings ?? [], 'ai.enabled');
 
         return $setting === null ? true : (bool) $setting;
     }

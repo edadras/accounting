@@ -45,6 +45,9 @@ final class IngestAlias extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -60,6 +63,10 @@ final class IngestAlias extends Model
         return $this->revoked_at !== null;
     }
 
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNull('revoked_at');

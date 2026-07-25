@@ -32,7 +32,7 @@ class AttributeWriter implements EntityWriter
 
     public function delete(SyncEntity $entity, Model $model, int $version): void
     {
-        $model->version = $version;
+        $model->setAttribute('version', $version);
         $model->save();
 
         // Soft delete: the row becomes a tombstone the next pull can carry, so a
@@ -47,7 +47,7 @@ class AttributeWriter implements EntityWriter
         // the models' own $fillable lists serve the REST controllers, which is a
         // different — and narrower — set of columns than a device owns.
         $model->forceFill($entity->writable($attributes));
-        $model->version = $version;
+        $model->setAttribute('version', $version);
         $model->save();
 
         return $model;

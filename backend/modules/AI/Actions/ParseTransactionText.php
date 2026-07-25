@@ -100,7 +100,7 @@ final readonly class ParseTransactionText
             type: $type,
             amount: $amount->minorUnits,
             currency: $amount->currency,
-            occurredAt: $date?->date ?? $now->startOfDay(),
+            occurredAt: $date->date ?? $now->startOfDay(),
             description: $description,
             categorySuggestion: $category,
             accountSuggestion: $account,

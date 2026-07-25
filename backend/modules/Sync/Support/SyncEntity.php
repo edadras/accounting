@@ -7,6 +7,7 @@ namespace Modules\Sync\Support;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Modules\Sync\Contracts\EntityWriter;
 use Modules\Sync\Writers\AttributeWriter;
 
@@ -38,12 +39,19 @@ final readonly class SyncEntity
     /**
      * Every lookup goes through the model's own query builder, so the workspace
      * global scope applies and one device can never reach another tenant's row.
+     *
+     * @return Builder<Model>
      */
     public function query(): Builder
     {
         $query = $this->model::query();
 
-        return $this->isSoftDeletable() ? $query->withTrashed() : $query;
+        // What `withTrashed()` does, spelled out: the macro only exists on
+        // builders whose model uses SoftDeletes, and the registry holds a bare
+        // class-string, so the scope is lifted by name instead.
+        return $this->isSoftDeletable()
+            ? $query->withoutGlobalScope(SoftDeletingScope::class)
+            : $query;
     }
 
     public function isSoftDeletable(): bool
@@ -56,7 +64,12 @@ final readonly class SyncEntity
         return in_array($field, $this->financial, true);
     }
 
-    /** The payload reduced to the fields this entity actually owns. */
+    /**
+     * The payload reduced to the fields this entity actually owns.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
     public function writable(array $payload): array
     {
         return array_intersect_key($payload, array_flip($this->fields));

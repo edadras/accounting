@@ -62,6 +62,9 @@ final readonly class PullChanges
         ];
     }
 
+    /**
+     * @return Builder<Model>
+     */
     private function query(SyncEntity $entity, ?CarbonImmutable $since, ?Cursor $cursor, int $limit): Builder
     {
         $query = $entity->query()
@@ -98,14 +101,14 @@ final readonly class PullChanges
     /** @return array<string, mixed> */
     private function describe(SyncEntity $entity, Model $record): array
     {
-        $updatedAt = $record->updated_at;
+        $updatedAt = EntityPayload::timestampOf($record, 'updated_at');
 
         return [
             '_sort' => $updatedAt?->format('Y-m-d H:i:s') ?? '',
             'entity' => $entity->key,
             'id' => (string) $record->getKey(),
             'op' => $this->operationOf($record),
-            'version' => (int) ($record->version ?? 0),
+            'version' => EntityPayload::versionOf($record),
             'updated_at' => EntityPayload::wire($updatedAt),
             'payload' => EntityPayload::of($entity, $record),
         ];
@@ -117,7 +120,14 @@ final readonly class PullChanges
             return SyncChange::OP_DELETE;
         }
 
-        return $record->created_at?->equalTo($record->updated_at)
+        $createdAt = EntityPayload::timestampOf($record, 'created_at');
+        $updatedAt = EntityPayload::timestampOf($record, 'updated_at');
+
+        // A row is only reported as a create while the two stamps still agree.
+        // Either one missing means the model does not keep timestamps at all,
+        // and an update is the safe reading — the device merges rather than
+        // inserting a second copy of a record it may already hold.
+        return $createdAt !== null && $updatedAt !== null && $createdAt == $updatedAt
             ? SyncChange::OP_CREATE
             : SyncChange::OP_UPDATE;
     }

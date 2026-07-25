@@ -33,14 +33,14 @@ abstract class TrendReport extends Report
         $query = $this->flowQuery($range, $this->transactionType());
 
         foreach ($this->dailyTotals($query) as $row) {
-            $key = $this->bucketKeyForDay($row->day, $bucket);
+            $key = $this->bucketKeyForDay($row['day'], $bucket);
 
             if (! isset($totals[$key])) {
                 continue;
             }
 
-            $totals[$key] += $row->total;
-            $counts[$key] += $row->transactions;
+            $totals[$key] += $row['total'];
+            $counts[$key] += $row['transactions'];
         }
 
         $rows = [];
