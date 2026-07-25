@@ -55,6 +55,19 @@
 audit_logs: workspace_id · user_id · action · subject_type · subject_id
             before(JSON) · after(JSON) · ip · user_agent · created_at
 ```
+
+**پیاده‌سازی شده** در `modules/Audit`. نکات:
+
+- تریت `Auditable` روی `Transaction`، `Account`، `Category` و `WorkspaceMember`
+- در به‌روزرسانی، **فقط فیلدهای تغییرکرده** ذخیره می‌شوند؛ ثبت کل رکورد آن یک
+  فیلدی را که بازبین دنبالش است زیر سی فیلد بی‌تغییر دفن می‌کند
+- رمز، توکن و `two_factor_secret` پیش از ذخیره **redact** می‌شوند
+- `updating` و `deleting` روی مدل استثنا پرتاب می‌کنند — ردی که بشود بی‌صدا
+  ویرایشش کرد، رد نیست
+- نوشتن در trail هرگز عملیات اصلی را از کار نمی‌اندازد؛ خطا بلعیده می‌شود
+  (یک ردِ گم‌شده بد است، یک هزینهٔ گم‌شده بدتر)
+- ورود، خروج و **ورود ناموفق** ثبت می‌شوند؛ چون Workspace ندارند در
+  `GET /me/security-log` دیده می‌شوند نه در trail یک Workspace
 - غیرقابل ویرایش (append-only)
 - قابل مشاهده برای `owner` و `admin`
 - نگهداری حداقل ۱۲ ماه

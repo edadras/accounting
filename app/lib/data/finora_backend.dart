@@ -6,6 +6,7 @@ import '../core/money/currency.dart';
 import '../sync/sync_api.dart';
 import '../sync/sync_controller.dart';
 import '../sync/sync_engine.dart';
+import 'remote/translations_api.dart';
 import 'api_ledger_repository.dart';
 import 'auth_repository.dart';
 import 'ledger_repository.dart';
@@ -43,6 +44,7 @@ final class FinoraBackend {
     required this.auth,
     required this.repository,
     required this.controller,
+    required this.translations,
     required this.baseCurrency,
   });
 
@@ -51,6 +53,7 @@ final class FinoraBackend {
   final AuthRepository auth;
   final ApiLedgerRepository repository;
   final SyncController controller;
+  final TranslationsApi translations;
   final Currency baseCurrency;
 
   static Future<FinoraBackend> connect({
@@ -84,9 +87,8 @@ final class FinoraBackend {
     final auth = AuthRepository(client: client, tokens: tokens);
     await auth.restore();
 
-    final store = await LocalStore.open(
-      keyValueStore ?? await SharedPreferencesStore.open(),
-    );
+    final kv = keyValueStore ?? await SharedPreferencesStore.open();
+    final store = await LocalStore.open(kv);
 
     return FinoraBackend._(
       client: client,
@@ -102,11 +104,28 @@ final class FinoraBackend {
         store: store,
         interval: syncInterval,
       ),
+      translations: TranslationsApi(client: client, store: kv),
       baseCurrency: baseCurrency,
     );
   }
 
+  /// Server wording, applied over the bundled strings.
+  ///
+  /// The cached copy is applied first so the UI never waits on the network for
+  /// its own labels, and a refresh failure is swallowed: the bundled dictionary
+  /// is complete, so the worst case is slightly stale wording.
+  Future<Map<String, String>> loadTranslations(String locale) async {
+    final cached = await translations.cached(locale);
+
+    try {
+      return await translations.refresh(locale);
+    } on Object {
+      return cached;
+    }
+  }
+
   List<Override> get overrides => [
+        finoraBackendProvider.overrideWithValue(this),
         baseCurrencyProvider.overrideWithValue(baseCurrency),
         ledgerRepositoryProvider.overrideWithValue(repository),
         localStoreProvider.overrideWithValue(store),
@@ -119,3 +138,7 @@ final class FinoraBackend {
     client.dio.close();
   }
 }
+
+/// The assembled stack, for the few places that need more than one piece of it.
+/// Null in the demo build, where there is no server.
+final finoraBackendProvider = Provider<FinoraBackend?>((ref) => null);

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Audit\Concerns\Auditable;
 use Modules\Core\Concerns\HasUlidKey;
 
 /**
@@ -16,6 +17,7 @@ use Modules\Core\Concerns\HasUlidKey;
  */
 final class WorkspaceMember extends Model
 {
+    use Auditable;
     use HasFactory;
     use HasUlidKey;
 

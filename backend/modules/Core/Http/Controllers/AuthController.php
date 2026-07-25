@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Modules\Audit\Support\AuditRecorder;
 use Modules\Core\Actions\CreateWorkspace;
 
 final class AuthController
@@ -40,6 +41,8 @@ final class AuthController
             locale: $user->locale,
         );
 
+        app(AuditRecorder::class)->record('auth.registered', $user);
+
         return response()->json([
             'data' => [
                 'token' => $user->createToken($this->deviceName($request))->plainTextToken,
@@ -61,6 +64,12 @@ final class AuthController
         if ($user === null || ! Hash::check($data['password'], $user->password)) {
             // One message for both cases: saying which was wrong tells an
             // attacker which emails are registered.
+            // The row a breach investigation actually needs.
+            app(AuditRecorder::class)->record(
+                'auth.login_failed',
+                after: ['email' => $data['email']],
+            );
+
             return response()->json([
                 'error' => [
                     'code' => 'invalid_credentials',
@@ -68,6 +77,8 @@ final class AuthController
                 ],
             ], 401);
         }
+
+        app(AuditRecorder::class)->record('auth.login', $user);
 
         return response()->json([
             'data' => [
@@ -82,6 +93,8 @@ final class AuthController
     {
         // Revoke only the token that made this call, so signing out on a phone
         // does not sign the user out on their laptop.
+        app(AuditRecorder::class)->record('auth.logout', $request->user());
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(status: 204);

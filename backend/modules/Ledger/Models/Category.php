@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Modules\Audit\Concerns\Auditable;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
 
@@ -24,6 +25,7 @@ use Modules\Core\Concerns\HasUlidKey;
  */
 final class Category extends Model
 {
+    use Auditable;
     use BelongsToWorkspace;
     use HasFactory;
     use HasUlidKey;

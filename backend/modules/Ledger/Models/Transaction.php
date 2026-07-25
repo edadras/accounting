@@ -11,12 +11,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Audit\Concerns\Auditable;
 use Modules\Core\Concerns\BelongsToWorkspace;
 use Modules\Core\Concerns\HasUlidKey;
 use Modules\Documents\Concerns\HasDocuments;
 
 final class Transaction extends Model
 {
+    use Auditable;
     use BelongsToWorkspace;
     use HasDocuments;
     use HasFactory;

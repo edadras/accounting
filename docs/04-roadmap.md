@@ -33,11 +33,11 @@
 
 | سنجه | مقدار |
 |---|---|
-| ماژول دامنه | ۱۸ |
-| تست Backend | ۳۵۸ تست / ۵۴۱۳ ادعا — همه سبز |
-| تست اپ | ۱۴۹ تست + ۱۱ تصویر Golden — همه سبز |
-| مسیر API | ۱۳۵ |
-| smoke سرتاسری | ۱۹ بررسی روی سرور واقعی |
+| ماژول دامنه | ۲۰ |
+| تست Backend | ۳۸۸ تست / ۵۵۰۰ ادعا — همه سبز |
+| تست اپ | ۱۵۲ تست + ۱۱ تصویر Golden — همه سبز |
+| مسیر API | ۱۴۶ |
+| smoke سرتاسری | ۲۶ بررسی روی سرور واقعی |
 
 ### آنچه عمداً باقی مانده
 
@@ -66,7 +66,7 @@
 - [ ] `Currency` و `ExchangeRate` + Seeder ارزهای اولیه
 - [ ] CI: PHPStan level 8، Laravel Pint، PHPUnit/Pest، `flutter analyze`، `flutter test`
 - [ ] الگوی خطای یکسان API + قرارداد پاسخ (سند ۰۵)
-- [ ] زیرساخت ترجمه از دیتابیس (سند ۰۶)
+- [x] زیرساخت ترجمه از دیتابیس (سند ۰۶)
 
 ### معیار پذیرش
 - `docker compose up` کل محیط توسعه را بالا می‌آورد.
@@ -81,14 +81,14 @@
 
 ### کارها
 - [ ] احراز هویت: ثبت‌نام، ورود، خروج، بازیابی رمز، Sanctum token، مدیریت دستگاه‌ها
-- [ ] Workspace: CRUD، تغییر Workspace فعال، دعوت عضو، نقش‌ها (Spatie Permission)
+- [x] Workspace: CRUD، دعوت عضو با توکن، نقش‌ها (بدون Spatie — نقش رشته‌ای در `workspace_members`)
 - [ ] **Global Workspace Scope** + تست نفوذ داده بین Workspaceها
 - [ ] Accounts: CRUD، موجودی افتتاحیه، آرشیو، محاسبهٔ مانده
 - [ ] Categories: درخت بی‌نهایت‌سطح، ساخت/ویرایش/جابه‌جایی/ادغام، Seeder چندزبانه
 - [ ] Transactions: income / expense / transfer + Entry دوطرفه
 - [ ] Idempotency روی همهٔ عملیات نوشتن
 - [ ] Recurring rules + Job روزانهٔ ثبت خودکار
-- [ ] Activity Log روی همهٔ تغییرات مالی
+- [x] Activity Log روی همهٔ تغییرات مالی (ماژول Audit)
 - [ ] مستند OpenAPI + مجموعهٔ Postman
 
 ### معیار پذیرش

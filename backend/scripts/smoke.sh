@@ -71,6 +71,34 @@ CODE=$("${CURL[@]}" -H "Authorization: Bearer $OTHER_TOKEN" -H "X-Workspace-Id: 
   -o /dev/null -w '%{http_code}' "$BASE/transactions")
 check "cross-workspace read forbidden" "$CODE" "403"
 
+echo "→ the audit trail captured that expense"
+TRAIL=$("${CURL[@]}" "${AUTH[@]}" "$BASE/audit-logs?action=transaction.created" | json '["meta"]["total"]')
+check "transaction.created recorded" "$TRAIL" "1"
+
+CODE=$("${CURL[@]}" -H "Authorization: Bearer $OTHER_TOKEN" -H "X-Workspace-Id: $WS" \
+  -o /dev/null -w '%{http_code}' "$BASE/audit-logs")
+check "trail hidden from another workspace" "$CODE" "403"
+
+echo "→ a member can be invited and can accept"
+INVITE=$("${CURL[@]}" "${AUTH[@]}" -X POST "$BASE/invitations" \
+  -d "{\"email\":\"other-$EMAIL\",\"role\":\"member\"}")
+TOKEN_INV=$(printf '%s' "$INVITE" | json '["data"]["token"]')
+check "invitation issued" "$([ -n "$TOKEN_INV" ] && echo yes || echo no)" "yes"
+
+CODE=$("${CURL[@]}" -H "Authorization: Bearer $OTHER_TOKEN" \
+  -o /dev/null -w '%{http_code}' -X POST "$BASE/invitations/$TOKEN_INV/accept")
+check "invitation accepted" "$CODE" "201"
+
+CODE=$("${CURL[@]}" -H "Authorization: Bearer $OTHER_TOKEN" -H "X-Workspace-Id: $WS" \
+  -o /dev/null -w '%{http_code}' "$BASE/transactions")
+check "invited member now has access" "$CODE" "200"
+
+echo "→ translations are readable without a token"
+CODE=$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BASE/translations/fa")
+check "dictionary is public" "$CODE" "200"
+CODE=$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BASE/translations/xx")
+check "unknown locale refused" "$CODE" "404"
+
 echo
 if [ "$fail" -eq 0 ]; then
   printf '\033[32m%d checks passed\033[0m\n' "$pass"

@@ -4,6 +4,7 @@ use App\Providers\AppServiceProvider;
 use Modules\AI\Providers\AIServiceProvider;
 use Modules\Alerts\Providers\AlertsServiceProvider;
 use Modules\Assets\Providers\AssetsServiceProvider;
+use Modules\Audit\Providers\AuditServiceProvider;
 use Modules\Banking\Providers\BankingServiceProvider;
 use Modules\Billing\Providers\BillingServiceProvider;
 use Modules\Budget\Providers\BudgetServiceProvider;
@@ -12,6 +13,7 @@ use Modules\Business\Providers\BusinessServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Documents\Providers\DocumentsServiceProvider;
 use Modules\Family\Providers\FamilyServiceProvider;
+use Modules\I18n\Providers\I18nServiceProvider;
 use Modules\Investment\Providers\InvestmentServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
@@ -31,6 +33,10 @@ return [
     // categories the rest post against, and the last two hook the modules above.
     CoreServiceProvider::class,
     LedgerServiceProvider::class,
+
+    // Audit early: it installs the recorder the models' observers reach for.
+    AuditServiceProvider::class,
+    I18nServiceProvider::class,
 
     BudgetServiceProvider::class,
     ReportsServiceProvider::class,

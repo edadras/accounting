@@ -6,6 +6,7 @@ namespace Modules\Core\Actions;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Modules\Audit\Support\AuditRecorder;
 use Modules\Core\Models\Workspace;
 use Modules\Core\Models\WorkspaceMember;
 use Modules\Core\Support\WorkspaceContext;
@@ -47,7 +48,11 @@ final readonly class CreateWorkspace
             // An empty workspace is a dead end — the user opens it and has
             // nothing to record against. Seed a starter account and category
             // tree inside the new workspace's own scope.
-            $this->context->runFor($workspace, fn () => $this->seeder->seed($workspace));
+            //
+            // Seeding is not something a person did, and thirty category rows
+            // would bury the first real entry, so the trail stays quiet for it.
+            $this->context->runFor($workspace, fn () => app(AuditRecorder::class)
+                ->withoutRecording(fn () => $this->seeder->seed($workspace)));
 
             return $workspace->fresh();
         });
