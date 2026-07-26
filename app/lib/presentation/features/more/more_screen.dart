@@ -5,12 +5,20 @@ import '../../../core/i18n/translator.dart';
 import '../../../core/theme/neon_effects.dart';
 import '../../../core/theme/neon_palette.dart';
 import '../../widgets/neon_widgets.dart';
+import '../alerts/alerts_screen.dart';
 import '../assets/assets_screen.dart';
 import '../banking/banking_screen.dart';
+import '../budget/budget_screen.dart';
 import '../buildings/buildings_screen.dart';
 import '../business/business_screen.dart';
 import '../documents/documents_screen.dart';
+import '../family/family_screen.dart';
 import '../investment/investment_screen.dart';
+import '../payroll/employees_screen.dart';
+import '../payroll/payroll_runs_screen.dart';
+import '../payroll/tax_rules_screen.dart';
+import '../recurring/recurring_screen.dart';
+import '../search/search_screen.dart';
 import '../travel/travel_screen.dart';
 import 'module_scaffold.dart';
 
@@ -96,6 +104,70 @@ const moduleEntries = <ModuleEntry>[
     icon: Icons.folder_copy_rounded,
     accent: NeonPalette.violet,
     open: DocumentsScreen.new,
+  ),
+  ModuleEntry(
+    id: 'search',
+    titleKey: 'search.title',
+    hintKey: 'search.subtitle',
+    icon: Icons.search_rounded,
+    accent: NeonPalette.cyan,
+    open: SearchScreen.new,
+  ),
+  ModuleEntry(
+    id: 'alerts',
+    titleKey: 'alerts.title',
+    hintKey: 'alerts.subtitle',
+    icon: Icons.notifications_active_rounded,
+    accent: NeonPalette.magenta,
+    open: AlertsScreen.new,
+  ),
+  ModuleEntry(
+    id: 'budget',
+    titleKey: 'budget.manageTitle',
+    hintKey: 'budget.manageSubtitle',
+    icon: Icons.pie_chart_rounded,
+    accent: NeonPalette.violet,
+    open: BudgetScreen.new,
+  ),
+  ModuleEntry(
+    id: 'recurring',
+    titleKey: 'recurring.title',
+    hintKey: 'recurring.subtitle',
+    icon: Icons.event_repeat_rounded,
+    accent: NeonPalette.amber,
+    open: RecurringScreen.new,
+  ),
+  ModuleEntry(
+    id: 'family',
+    titleKey: 'family.title',
+    hintKey: 'family.subtitle',
+    icon: Icons.family_restroom_rounded,
+    accent: NeonPalette.lime,
+    open: FamilyScreen.new,
+  ),
+  ModuleEntry(
+    id: 'payroll-runs',
+    titleKey: 'payroll.runs',
+    hintKey: 'payroll.runsSubtitle',
+    icon: Icons.payments_rounded,
+    accent: NeonPalette.amber,
+    open: PayrollRunsScreen.new,
+  ),
+  ModuleEntry(
+    id: 'employees',
+    titleKey: 'payroll.employees',
+    hintKey: 'payroll.employeesSubtitle',
+    icon: Icons.badge_rounded,
+    accent: NeonPalette.cyan,
+    open: EmployeesScreen.new,
+  ),
+  ModuleEntry(
+    id: 'tax-rules',
+    titleKey: 'payroll.taxRules',
+    hintKey: 'payroll.taxRulesSubtitle',
+    icon: Icons.rule_folder_rounded,
+    accent: NeonPalette.violet,
+    open: TaxRulesScreen.new,
   ),
 ];
 

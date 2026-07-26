@@ -87,12 +87,28 @@ final class AuthRepository {
   Future<AuthResult> login({
     required String email,
     required String password,
-  }) async {
-    final response = await client.post('/auth/login', body: {
-      'email': email,
-      'password': password,
-    },);
+  }) async =>
+      adoptLogin(await requestLogin(email: email, password: password));
 
+  /// The raw `POST /auth/login` envelope, adopted by nobody.
+  ///
+  /// Split out of [login] because the answer is not always a session: an account
+  /// with a confirmed second factor gets `two_factor_required` and a challenge,
+  /// and the caller has to look before storing anything. Read it with
+  /// [LoginChallenge.fromLogin], then hand it to [adoptLogin] if there is a
+  /// token in it.
+  Future<Map<String, Object?>> requestLogin({
+    required String email,
+    required String password,
+  }) =>
+      client.post('/auth/login', body: {
+        'email': email,
+        'password': password,
+      },);
+
+  /// Takes the token and workspaces out of a login envelope and makes them this
+  /// device's session.
+  Future<AuthResult> adoptLogin(Map<String, Object?> response) async {
     final data = _data(response);
     final workspaces = [
       for (final item in data['workspaces'] as List? ?? const [])

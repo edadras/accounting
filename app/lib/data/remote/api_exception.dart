@@ -12,6 +12,7 @@ final class ApiException implements Exception {
     required this.code,
     this.message = '',
     this.details = const {},
+    this.rawDetails = const {},
     this.statusCode,
     this.requestId,
   });
@@ -21,7 +22,20 @@ final class ApiException implements Exception {
   final String message;
 
   /// Field name → list of validation codes, e.g. `{'amount': ['min_value']}`.
+  ///
+  /// Flattened for the common case, which is a 422. Anything structured is
+  /// stringified on the way in, so read [rawDetails] instead when the server
+  /// sends records rather than codes.
   final Map<String, List<String>> details;
+
+  /// `details` exactly as the server sent it.
+  ///
+  /// Not every `details` is a validation map: `downgrade_blocked` carries a
+  /// list of `{feature, limit, used}` records and `deletion_already_scheduled`
+  /// carries a date. Flattening those to strings threw away the only part a
+  /// screen could use, leaving it to show a generic refusal while the server
+  /// had already said exactly which limit was hit.
+  final Map<String, Object?> rawDetails;
   final int? statusCode;
   final String? requestId;
 
@@ -62,6 +76,7 @@ final class ApiException implements Exception {
           code: error['code'] as String? ?? _codeForStatus(statusCode),
           message: error['message'] as String? ?? '',
           details: _parseDetails(error['details']),
+          rawDetails: _rawDetails(error['details']),
           statusCode: statusCode,
           requestId: error['request_id'] as String?,
         );
@@ -94,6 +109,13 @@ final class ApiException implements Exception {
       // an answer, which is the same thing as being offline.
       _ => const ApiException(code: codeNetworkUnreachable),
     };
+  }
+
+  /// Keeps the server's own structure so a caller can read a record, a number
+  /// or a date out of it.
+  static Map<String, Object?> _rawDetails(Object? raw) {
+    if (raw is! Map) return const {};
+    return {for (final entry in raw.entries) '${entry.key}': entry.value};
   }
 
   static Map<String, List<String>> _parseDetails(Object? raw) {

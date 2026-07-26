@@ -71,9 +71,17 @@ Widget conflictsApp(SyncController controller, AppLocale locale) {
 void main() {
   testWidgets('the offline banner shows the real pending count',
       (tester) async {
+    // Seeded before connecting: with a backend configured, the app is behind
+    // AuthGate, and an unauthenticated start correctly shows sign-in rather
+    // than the shell. A stored token and workspace restore the session without
+    // a request, which matters here because the adapter refuses every one.
+    final tokens = MemoryTokenStore();
+    await tokens.writeToken('offline-session');
+    await tokens.writeWorkspaceId('01JWORKSPACE00000000000000');
+
     final backend = (await tester.runAsync(() => FinoraBackend.connect(
           keyValueStore: MemoryKeyValueStore(),
-          tokenStore: MemoryTokenStore(),
+          tokenStore: tokens,
           adapter: MockAdapter((options) => throw connectionFailure(options)),
           policy: const RetryPolicy(maxAttempts: 1),
         ),))!;

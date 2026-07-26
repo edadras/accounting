@@ -115,6 +115,13 @@ void main() {
       final tile = find.byKey(ValueKey('module-${entry.id}'));
       expect(tile, findsOneWidget, reason: 'hub is missing ${entry.id}');
 
+      // The hub scrolls now. A tile can be in the tree via the list's cache
+      // extent while sitting off-screen, and a tap on it silently misses —
+      // the failure then shows up as a missing back button one line later,
+      // which reads like the opened screen is broken.
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+
       await tester.tap(tile);
       await tester.pumpAndSettle();
       expect(

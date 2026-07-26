@@ -141,6 +141,36 @@ void main() {
       expect(failure.isRetryable, isFalse);
     });
 
+    test('structured details survive alongside the flattened ones', () {
+      // `downgrade_blocked` answers with records, not validation codes.
+      // Flattening them to strings left a screen with nothing to say beyond a
+      // generic refusal, while the server had already named the exact limit.
+      final failure = ApiException.fromEnvelope(
+        {
+          'error': {
+            'code': 'downgrade_blocked',
+            'details': {
+              'blocking': [
+                {'feature': 'accounts', 'limit': 2, 'used': 3},
+              ],
+              'purge_after': '2026-08-24',
+            },
+          },
+        },
+        statusCode: 409,
+      );
+
+      final blocking = failure.rawDetails['blocking']! as List<Object?>;
+      final first = blocking.single! as Map<Object?, Object?>;
+      expect(first['feature'], 'accounts');
+      expect(first['limit'], 2);
+      expect(first['used'], 3);
+      expect(failure.rawDetails['purge_after'], '2026-08-24');
+
+      // The flattened view still works for anything that only wanted a string.
+      expect(failure.details['purge_after'], ['2026-08-24']);
+    });
+
     test('falls back to a status-derived code when there is no envelope', () {
       expect(
         ApiException.fromEnvelope('<html>502</html>', statusCode: 502).code,

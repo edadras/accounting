@@ -6,6 +6,7 @@ import 'core/i18n/app_locale.dart';
 import 'core/i18n/translator.dart';
 import 'core/theme/neon_theme.dart';
 import 'presentation/app_state.dart';
+import 'presentation/features/auth/auth_gate.dart';
 import 'presentation/shell.dart';
 
 void main() {
@@ -44,7 +45,9 @@ class FinoraApp extends ConsumerWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const AppShell(),
+      // The gate keys on whether a backend is configured, never on whether a
+      // token exists — so the demo build still opens straight into the shell.
+      home: const AuthGate(child: AppShell()),
     );
   }
 }

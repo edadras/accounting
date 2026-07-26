@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translator.dart';
 import '../../../core/theme/neon_palette.dart';
 import '../../../data/ledger_repository.dart';
+import '../../../data/modules_repository.dart' show clockProvider;
 import '../../../domain/entities.dart';
 import '../../widgets/neon_card.dart';
 import '../../widgets/neon_widgets.dart';
@@ -23,6 +24,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final t = ref.watch(translatorProvider);
+    final now = ref.watch(clockProvider);
     final locale = ref.watch(localeProvider).code;
     final transactions = ref.watch(transactionsProvider);
     final categories = ref.watch(categoriesProvider).valueOrNull ?? const <Category>[];
@@ -86,7 +88,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         Padding(
                           padding: EdgeInsetsDirectional.only(top: index == 0 ? 0 : 18, bottom: 8),
                           child: Text(
-                            _dayLabel(transaction.occurredAt, t),
+                            _dayLabel(transaction.occurredAt, t, now),
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -133,8 +135,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _dayLabel(DateTime date, Translator t) {
-    final now = DateTime.now();
+  /// Reads the injected clock, not the wall clock.
+  ///
+  /// With `DateTime.now()` here, "Today" was decided by when the frame was
+  /// drawn while the seeded rows sat at offsets from a pinned clock — so the
+  /// transactions goldens passed all day and failed the moment the date rolled
+  /// over, on a suite nobody had touched.
+  String _dayLabel(DateTime date, Translator t, DateTime now) {
     if (_sameDay(date, now)) return t('common.today');
     if (_sameDay(date, now.subtract(const Duration(days: 1)))) {
       return t('common.yesterday');

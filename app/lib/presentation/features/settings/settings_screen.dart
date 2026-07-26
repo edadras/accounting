@@ -10,6 +10,8 @@ import '../../widgets/neon_card.dart';
 import '../../widgets/neon_widgets.dart';
 import '../audit/audit_screen.dart';
 import '../audit/security_log_screen.dart';
+import '../auth/sign_out_button.dart';
+import '../billing/billing_screen.dart';
 import '../data/account_deletion_screen.dart';
 import '../data/data_export_screen.dart';
 import '../members/accept_invitation_screen.dart';
@@ -113,6 +115,13 @@ class SettingsScreen extends ConsumerWidget {
             NeonPalette.amber,
           ),
           (
+            'billing',
+            'billing.title',
+            'billing.subtitle',
+            Icons.workspace_premium_rounded,
+            NeonPalette.amber,
+          ),
+          (
             'export',
             'data.export.title',
             'settings.exportHint',
@@ -164,6 +173,10 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 18),
+        // Renders nothing when no backend is configured, so the demo build is
+        // untouched and this can sit here unconditionally.
+        const SignOutButton(),
       ],
     );
   }
@@ -195,6 +208,7 @@ class SettingsTile extends ConsumerWidget {
       'two-factor' => TwoFactorScreen.route(),
       'export' => DataExportScreen.route(),
       'delete-account' => AccountDeletionScreen.route(),
+      'billing' => BillingScreen.route(),
       'members' => MaterialPageRoute<void>(builder: (_) => const MembersScreen()),
       'accept-invitation' =>
         MaterialPageRoute<void>(builder: (_) => const AcceptInvitationScreen()),

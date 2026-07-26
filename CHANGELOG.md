@@ -18,6 +18,40 @@ to ignore fields they do not recognise.
 
 ### Added
 
+- **Sign-in.** The client had an `AuthRepository` and no screen using it, so the
+  app only ever ran on in-memory demo data. Sign-in, register, workspace picker,
+  sign-out and an auth gate; the gate keys on whether a backend is configured,
+  never on whether a token exists, so an unconfigured build still opens straight
+  into the demo shell.
+- **UI for six backends that had none**: Alerts (inbox, rules, quiet hours),
+  Recurring, Family (allowances and caps), Budget management, Payroll
+  (employees, runs, payslips, tax rules) and Search. Billing joins settings.
+- **`PATCH /api/v1/budgets/{id}`** — the module had no update endpoint, so
+  editing a budget meant creating a replacement and deleting the original, which
+  leaves a duplicate whenever the second leg fails. Currency cannot change and a
+  custom period cannot be inverted; both are validated against the stored row.
+- **`ApiException.rawDetails`** — `details` was flattened to
+  `Map<String, List<String>>`, which stringified structured payloads. A
+  `downgrade_blocked` answer naming the exact limit reached the UI as unusable
+  text, so screens showed a generic refusal instead.
+
+### Fixed
+
+- **Five finished screens were reachable from nothing** — conflict resolution,
+  documents (and its preview), report export, forgot-password and the two-factor
+  challenge. Conflict resolution was the costly one: the sync engine has always
+  counted conflicts, so a lost edit was already detected and simply could not be
+  looked at. There is now a test for reachability itself, because every one of
+  those screens passed its own suite the whole time it was unreachable.
+- **The transactions screen read the wall clock** for its Today/Yesterday
+  headings while its rows were pinned to the injected clock, so the goldens
+  passed all day and failed at midnight on a suite nobody had touched.
+- **`payslip_count` never appeared on `GET /payroll/runs`** — the controller
+  counted without loading the relation and the resource asked whether it was
+  loaded.
+- **The OpenAPI description named error codes the server does not throw**
+  (`payroll_run_immutable` and two others) and the wrong field on
+  `POST /payroll/runs/{id}/pay`.
 - `docs/openapi.yaml` — OpenAPI 3.1 description of the v1 HTTP API, generated
   from `php artisan route:list` so it cannot describe endpoints that do not
   exist. Documents Sanctum bearer auth, the `X-Workspace-Id` requirement,
