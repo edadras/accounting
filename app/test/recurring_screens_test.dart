@@ -386,69 +386,169 @@ void main() {
     );
   });
 
-  testWidgets('the weekly option never offers a weekday the server ignores',
+  testWidgets('a weekly rule can name its weekday, and sends it',
       (tester) async {
+    final adapter = recurringServer(
+      onWrite: (options) => MockAdapter.json(
+        {'data': recurringJson(id: 'r-new')},
+        status: 201,
+      ),
+    );
+
     await pumpFeature(
       tester,
       const RecurringRuleEditorScreen(),
       locale: AppLocale.en,
-      adapter: recurringServer(),
+      adapter: adapter,
     );
 
+    await tester.enterText(
+      find.byKey(const ValueKey('recurring-amount')),
+      '40.00',
+    );
     await tapKey(tester, 'recurring-freq-weekly');
 
+    // A day of the month means nothing to a weekly rule, and the weekday means
+    // nothing to any other kind — so the two pickers swap rather than stack.
     expect(find.byKey(const ValueKey('recurring-day-plus')), findsNothing);
-    expect(find.text(t(AppLocale.en, 'recurring.weeklyNote')), findsOneWidget);
+    expect(find.text(t(AppLocale.en, 'recurring.weekTue')), findsOneWidget);
+
+    await tapKey(tester, 'recurring-weekday-2');
+    await tapKey(tester, 'recurring-save');
+
+    final body = bodyOf(
+      adapter.requests.lastWhere((request) => request.method == 'POST'),
+    );
+
+    expect(body['frequency'], 'weekly');
+    expect(body['day_of_week'], 2, reason: '0 is Sunday, so 2 is Tuesday');
+    expect(
+      body['day_of_month'],
+      isNull,
+      reason: 'a weekly rule carrying a day of the month is a stale setting',
+    );
+  });
+
+  testWidgets('a weekly rule may also leave the weekday to its start date',
+      (tester) async {
+    final adapter = recurringServer(
+      onWrite: (options) => MockAdapter.json(
+        {'data': recurringJson(id: 'r-new')},
+        status: 201,
+      ),
+    );
+
+    await pumpFeature(
+      tester,
+      const RecurringRuleEditorScreen(),
+      locale: AppLocale.en,
+      adapter: adapter,
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('recurring-amount')),
+      '40.00',
+    );
+    await tapKey(tester, 'recurring-freq-weekly');
+    await tapKey(tester, 'recurring-weekday-4');
+    await tapKey(tester, 'recurring-weekday-none');
+    await tapKey(tester, 'recurring-save');
+
+    final body = bodyOf(
+      adapter.requests.lastWhere((request) => request.method == 'POST'),
+    );
+
+    expect(body['frequency'], 'weekly');
+    expect(body['day_of_week'], isNull);
   });
 
   // ------------------------------------------------------------------- edit
 
-  testWidgets('editing offers only the four fields PATCH accepts',
+  testWidgets('editing rewrites the schedule and the template in one PATCH',
       (tester) async {
     final adapter = recurringServer(
       onWrite: (options) => MockAdapter.json({'data': recurringJson(id: 'r-rent')}),
     );
 
+    final existing = recurringJson(
+      id: 'r-rent',
+      // Set elsewhere, editable nowhere here — and so the one thing a full
+      // template rewrite could quietly delete.
+      tags: const ['home', 'fixed'],
+    );
+
     await pumpFeature(
       tester,
-      RecurringRuleEditorScreen(existing: RecurringRule.fromJson(rent)),
+      RecurringRuleEditorScreen(existing: RecurringRule.fromJson(existing)),
       locale: AppLocale.en,
       adapter: adapter,
     );
 
-    // The schedule is a fact on this screen, not a control.
-    expect(
-      find.text(t(AppLocale.en, 'recurring.scheduleLocked')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('recurring-freq-monthly')), findsNothing);
-    expect(find.byKey(const ValueKey('recurring-amount')), findsNothing);
-    expect(find.byKey(const ValueKey('recurring-interval-plus')), findsNothing);
+    // Every part of the rule is a control now, not a fact printed at the user.
+    expect(find.byKey(const ValueKey('recurring-amount')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recurring-freq-weekly')), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('recurring-name')),
       'House rent',
     );
-    await tapKey(tester, 'recurring-auto-post');
+    await tester.enterText(
+      find.byKey(const ValueKey('recurring-amount')),
+      '3000.00',
+    );
+    await tapKey(tester, 'recurring-freq-weekly');
+    await tapKey(tester, 'recurring-interval-plus');
+    await tapKey(tester, 'recurring-weekday-3');
+
+    // The one thing the form cannot promise, said where the control is: the
+    // server only moves the cursor of a rule that has not posted yet.
+    expect(find.text(t(AppLocale.en, 'recurring.startsAtNote')), findsOneWidget);
+
     await tapKey(tester, 'recurring-save');
 
-    final patch = adapter.requests.lastWhere(
-      (request) => request.method == 'PATCH',
-    );
-    final body = bodyOf(patch);
+    final writes = adapter.requests
+        .where((request) => request.method != 'GET')
+        .toList();
+
+    // One request, and none of it a delete: the rule keeps its id and whatever
+    // it has already posted.
+    expect(writes.map((request) => request.method), ['PATCH']);
+    expect(writes.single.path, '/recurring-rules/r-rent');
+
+    final body = bodyOf(writes.single);
+    final template = body['template']! as Map;
 
     expect(body['name'], 'House rent');
-    expect(body['auto_post'], isFalse);
-    expect(body['is_paused'], isFalse);
+    expect(body['frequency'], 'weekly');
+    expect(body['interval'], 2);
+    expect(body['day_of_week'], 3);
+    expect(
+      body['day_of_month'],
+      isNull,
+      reason: 'the 5th of the month means nothing to a weekly rule',
+    );
+    expect(template['amount'], 300000);
+    expect(template['currency'], 'TRY');
+    expect(
+      template['account_id'],
+      'acc-bank',
+      reason: 'an untouched account is not reassigned by opening the form',
+    );
+    expect(
+      template['tags'],
+      ['home', 'fixed'],
+      reason: 'a template sent without them would delete them',
+    );
+
+    // The id travels in the path, not in the body.
+    expect(body.containsKey('id'), isFalse);
 
     // No end date on this rule, so clearing it is the honest request.
     expect(body.containsKey('ends_at'), isTrue);
     expect(body['ends_at'], isNull);
-    expect(body.containsKey('template'), isFalse);
-    expect(body.containsKey('frequency'), isFalse);
   });
 
-  testWidgets('a server refusal is shown as its code, never its English',
+  testWidgets('a server refusal is shown as its code, and changes nothing',
       (tester) async {
     final adapter = recurringServer(
       onWrite: (options) => MockAdapter.error(
@@ -474,6 +574,12 @@ void main() {
     expect(
       find.text('This English sentence must never reach the screen.'),
       findsNothing,
+    );
+
+    // A failed edit is a failed edit, not a half-finished rebuild.
+    expect(
+      adapter.requests.any((request) => request.method == 'DELETE'),
+      isFalse,
     );
   });
 }

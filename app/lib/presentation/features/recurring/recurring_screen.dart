@@ -288,6 +288,7 @@ class _RuleCard extends ConsumerWidget {
                         rule.dayOfMonth,
                         t: t,
                         locale: locale,
+                        dayOfWeek: rule.dayOfWeek,
                       ),
                       style: TextStyle(fontSize: 11.5, color: muted),
                     ),

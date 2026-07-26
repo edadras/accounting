@@ -93,21 +93,22 @@ String scheduleSummary(
       t('recurring.everyYears', args: {'count': count}),
   };
 
-  if (!frequency.usesDayOfMonth || dayOfMonth == null) return every;
+  final day = switch (frequency) {
+    _ when frequency.usesDayOfMonth && dayOfMonth != null => t(
+        'recurring.onDay',
+        args: {'day': DateFormatter.number(dayOfMonth, locale.code)},
+      ),
+    _ when frequency.usesDayOfWeek && dayOfWeek != null =>
+      t('recurring.onWeekday', args: {'day': t(weekdayKey(dayOfWeek))}),
+    _ => null,
+  };
+
+  if (day == null) return every;
 
   // Even the separator is translated: punctuation between two clauses is a
   // typographic choice each language makes for itself, and hard-coding one here
   // would put it on the wrong side of an RTL line.
-  return t(
-    'recurring.scheduleWithDay',
-    args: {
-      'every': every,
-      'day': t(
-        'recurring.onDay',
-        args: {'day': DateFormatter.number(dayOfMonth, locale.code)},
-      ),
-    },
-  );
+  return t('recurring.scheduleWithDay', args: {'every': every, 'day': day});
 }
 
 /// "in 4 days" / "today" / "9 days late", or null once the rule has run out.

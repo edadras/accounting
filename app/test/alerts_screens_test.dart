@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:finora/core/i18n/app_locale.dart';
+import 'package:finora/data/alerts_repository.dart';
 import 'package:finora/presentation/features/alerts/alert_preferences_screen.dart';
 import 'package:finora/presentation/features/alerts/alert_rule_editor_screen.dart';
 import 'package:finora/presentation/features/alerts/alert_rules_screen.dart';
@@ -381,15 +382,13 @@ void main() {
     expect(find.byKey(const ValueKey('alerts-rules-empty')), findsOneWidget);
   });
 
-  testWidgets('turning a rule off rewrites it, because the API has no edit',
+  testWidgets('turning a rule off is one PATCH carrying one field',
       (tester) async {
     final adapter = alertsServer(
       rules: () => [alertRuleJson(id: 'r1', type: 'check_due', leadDays: 5)],
-      onWrite: (options) => options.method == 'POST'
-          ? MockAdapter.json({
-              'data': alertRuleJson(id: 'r1', type: 'check_due', isActive: false),
-            }, status: 201,)
-          : MockAdapter.json(const <String, Object?>{}, status: 204),
+      onWrite: (options) => MockAdapter.json({
+        'data': alertRuleJson(id: 'r1', type: 'check_due', isActive: false),
+      }),
     );
 
     await pumpFeature(
@@ -406,12 +405,14 @@ void main() {
         .where((request) => request.method != 'GET')
         .toList();
 
-    expect(writes.map((request) => request.method), ['DELETE', 'POST']);
+    // The delete-then-recreate this replaced had a window in which the rule did
+    // not exist; a single PATCH has none.
+    expect(writes.map((request) => request.method), ['PATCH']);
+    expect(writes.single.path, '/alerts/rules/r1');
 
-    final body = bodyOf(writes.last);
-    expect(body['id'], 'r1', reason: 'the rule keeps its identity');
-    expect(body['is_active'], isFalse);
-    expect(body['lead_days'], 5, reason: 'the rest of the rule is preserved');
+    // Only the flag that was flipped. Anything else would be this row claiming
+    // to know settings it never showed.
+    expect(bodyOf(writes.single), {'is_active': false});
   });
 
   // ---------------------------------------------------------------- editor
@@ -476,6 +477,116 @@ void main() {
     expect(
       adapter.requests.any((request) => request.method == 'POST'),
       isFalse,
+    );
+  });
+
+  testWidgets('editing a rule patches it in place and never sends its type',
+      (tester) async {
+    final adapter = alertsServer(
+      onWrite: (options) => MockAdapter.json({
+        'data': alertRuleJson(id: 'r1', type: 'low_balance'),
+      }),
+    );
+
+    await pumpFeature(
+      tester,
+      AlertRuleEditorScreen(
+        existing: AlertRule.fromJson(
+          alertRuleJson(
+            id: 'r1',
+            type: 'low_balance',
+            // A per-account map this screen has no control for. It belongs to
+            // the same scanner, so an edit must carry it through untouched.
+            config: const {
+              'threshold': 50000,
+              'thresholds': {'acc-1': 9900},
+            },
+            channels: const ['database', 'email'],
+            leadDays: 5,
+          ),
+        ),
+      ),
+      locale: AppLocale.en,
+      adapter: adapter,
+    );
+
+    // The type decides what `config` means, so it is a fact here, not a choice.
+    expect(find.byKey(const ValueKey('rule-type-low_balance')), findsNothing);
+    expect(find.text(t(AppLocale.en, 'alerts.typeLowBalance')), findsWidgets);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('rule-threshold')),
+      '750.00',
+    );
+    await tapKey(tester, 'rule-save');
+
+    final writes = adapter.requests
+        .where((request) => request.method != 'GET')
+        .toList();
+
+    expect(writes.map((request) => request.method), ['PATCH']);
+    expect(writes.single.path, '/alerts/rules/r1');
+
+    final body = bodyOf(writes.single);
+    expect(
+      body.containsKey('type'),
+      isFalse,
+      reason: 'a changed type is a 422, and an unchanged one is noise',
+    );
+    expect((body['config']! as Map)['threshold'], 75000);
+    expect(
+      (body['config']! as Map)['thresholds'],
+      {'acc-1': 9900},
+      reason: 'a setting the editor cannot show is a setting it must not drop',
+    );
+    expect(body['channels'], containsAll(<String>['database', 'email']));
+    expect(body['lead_days'], 5);
+  });
+
+  testWidgets('an edit that fails leaves the rule exactly as it was',
+      (tester) async {
+    // The property the old delete-then-recreate could not offer: there, a
+    // refusal on the second request had already destroyed the rule.
+    final rules = [
+      alertRuleJson(id: 'r1', type: 'check_due', leadDays: 5),
+    ];
+
+    final adapter = alertsServer(
+      rules: () => rules,
+      onWrite: (options) => MockAdapter.error(
+        'validation_failed',
+        status: 422,
+        message: 'This English sentence must never reach the screen.',
+      ),
+    );
+
+    await pumpFeature(
+      tester,
+      const AlertRulesScreen(),
+      locale: AppLocale.en,
+      adapter: adapter,
+    );
+
+    await tapKey(tester, 'rule-toggle-r1');
+
+    expect(
+      adapter.requests.any((request) => request.method == 'DELETE'),
+      isFalse,
+      reason: 'nothing is removed on the way to an edit',
+    );
+
+    // Still there, still listed, still active.
+    expect(rules, hasLength(1));
+    expect(find.byKey(const ValueKey('rule-r1')), findsOneWidget);
+    expect(find.text(t(AppLocale.en, 'alerts.ruleActive')), findsOneWidget);
+
+    expect(
+      find.text(t(AppLocale.en, 'error.validation_failed')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('This English sentence must never reach the screen.'),
+      findsNothing,
     );
   });
 

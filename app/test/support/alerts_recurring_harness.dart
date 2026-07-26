@@ -122,6 +122,13 @@ String number(AppLocale locale, int value) =>
 Future<void> tapKey(WidgetTester tester, String key) async {
   final finder = find.byKey(ValueKey(key));
 
+  // A focused field holds the list against its own caret, so a control further
+  // down is reported at a position it is not actually painted at and the tap
+  // lands on whatever is really there — silently, because a missed tap is only
+  // a warning. Dropping focus is what tapping away from a field does anyway.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await pumpFrames(tester, frames: 2);
+
   // A `ListView` builds lazily, so a control far down the form does not exist
   // yet — scrolling towards it is what brings it into the tree at all.
   //
@@ -311,9 +318,11 @@ Map<String, Object?> recurringJson({
   String type = 'expense',
   int amount = 250000,
   String currency = 'TRY',
+  List<String> tags = const [],
   String frequency = 'monthly',
   int interval = 1,
   int? dayOfMonth = 5,
+  int? dayOfWeek,
   String startsAt = '2026-01-05T00:00:00Z',
   String? endsAt,
   String? nextRunAt = '2026-08-05T00:00:00Z',
@@ -333,11 +342,12 @@ Map<String, Object?> recurringJson({
         'currency': currency,
         'description': 'Monthly rent',
         'payee': 'Landlord',
+        'tags': tags,
       },
       'frequency': frequency,
       'interval': interval,
       'day_of_month': dayOfMonth,
-      'day_of_week': null,
+      'day_of_week': dayOfWeek,
       'starts_at': startsAt,
       'ends_at': endsAt,
       'next_run_at': nextRunAt,

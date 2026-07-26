@@ -5,7 +5,6 @@ import '../../../core/date/date_formatter.dart';
 import '../../../core/i18n/translator.dart';
 import '../../../core/money/currency.dart';
 import '../../../core/money/money.dart';
-import '../../../core/money/money_formatter.dart';
 import '../../../core/theme/neon_effects.dart';
 import '../../../core/theme/neon_palette.dart';
 import '../../../data/ledger_repository.dart'
@@ -21,13 +20,16 @@ import '../more/module_scaffold.dart';
 import 'recurring_presentation.dart';
 import 'recurring_providers.dart';
 
-/// Write a standing instruction, or change the little of it the server lets you
-/// change.
+/// Write a standing instruction, or change one.
 ///
-/// `PATCH /recurring-rules/{rule}` validates exactly four fields — name, end
-/// date, auto-post and paused — so in edit mode everything else is shown as a
-/// fact rather than as a control. A frequency picker that silently discarded
-/// the change would be worse than no picker at all.
+/// `PATCH /recurring-rules/{rule}` takes the template and the schedule as well
+/// as the flags, so editing is the same form as creating and every control is
+/// real. The rule keeps its id and its posting history, which is the whole
+/// reason changing an amount is no longer a delete and a rebuild.
+///
+/// One asymmetry survives, and it belongs to the server rather than the form:
+/// moving the start date only moves the next run on a rule that has not posted
+/// yet. A rule already under way keeps its cursor, so the field says so.
 class RecurringRuleEditorScreen extends ConsumerStatefulWidget {
   const RecurringRuleEditorScreen({super.key, this.existing});
 
@@ -59,6 +61,10 @@ class _RecurringRuleEditorScreenState
   late RecurringFrequency _frequency;
   late int _interval;
   int? _dayOfMonth;
+
+  /// 0 = Sunday, the API's own basis. Null keeps the weekday the rule started
+  /// on.
+  int? _dayOfWeek;
   late DateTime _startsAt;
   DateTime? _endsAt;
   late bool _autoPost;
@@ -94,6 +100,7 @@ class _RecurringRuleEditorScreenState
     _frequency = existing?.frequency ?? RecurringFrequency.monthly;
     _interval = existing?.interval ?? 1;
     _dayOfMonth = existing?.dayOfMonth;
+    _dayOfWeek = existing?.dayOfWeek;
     _startsAt = existing?.startsAt ?? ref.read(clockProvider);
     _endsAt = existing?.endsAt;
     _autoPost = existing?.autoPost ?? true;
@@ -142,21 +149,12 @@ class _RecurringRuleEditorScreenState
 
     try {
       final repository = ref.read(recurringRepositoryProvider);
+      final existing = widget.existing;
 
-      if (_isEditing) {
-        // Only what PATCH accepts. `clearEndsAt` is a flag rather than a null
-        // argument because "no end date" and "leave the end date alone" are
-        // different requests.
-        await repository.update(
-          widget.existing!.id,
-          name: _name.text.trim(),
-          endsAt: _endsAt,
-          clearEndsAt: _endsAt == null,
-          autoPost: _autoPost,
-          isPaused: _isPaused,
-        );
+      if (existing != null) {
+        await repository.save(_draft(id: existing.id));
       } else {
-        await repository.create(_draft());
+        await repository.create(_draft(id: ''));
       }
 
       ref.invalidate(recurringRulesProvider);
@@ -172,13 +170,10 @@ class _RecurringRuleEditorScreenState
   }
 
   /// A translation key, or null when the draft is good enough to send.
+  ///
+  /// The same checks either way: an edit now carries the whole rule, so it can
+  /// break it in exactly the ways a new one can.
   String? _validate() {
-    if (_isEditing) {
-      return _endsAt != null && _endsAt!.isBefore(widget.existing!.startsAt)
-          ? 'recurring.endsBeforeStart'
-          : null;
-    }
-
     if (_accountId == null || _accountId!.isEmpty) {
       return 'recurring.accountRequired';
     }
@@ -205,8 +200,8 @@ class _RecurringRuleEditorScreenState
     return null;
   }
 
-  RecurringRule _draft() => RecurringRule(
-        id: '',
+  RecurringRule _draft({required String id}) => RecurringRule(
+        id: id,
         name: _name.text.trim().isEmpty ? null : _name.text.trim(),
         template: RecurringTemplate(
           type: _type,
@@ -220,10 +215,14 @@ class _RecurringRuleEditorScreenState
           categoryId: _categoryId,
           description: _description.text.trim(),
           payee: _payee.text.trim(),
+          // Carried through untouched. No control here edits tags, and a
+          // template sent without them replaces the stored one.
+          tags: widget.existing?.template.tags ?? const [],
         ),
         frequency: _frequency,
         interval: _interval,
         dayOfMonth: _frequency.usesDayOfMonth ? _dayOfMonth : null,
+        dayOfWeek: _frequency.usesDayOfWeek ? _dayOfWeek : null,
         startsAt: _startsAt,
         endsAt: _endsAt,
         autoPost: _autoPost,
@@ -237,13 +236,13 @@ class _RecurringRuleEditorScreenState
     return ModulePage(
       title: _isEditing ? t('recurring.editTitle') : t('recurring.newTitle'),
       subtitle: t('recurring.subtitle'),
-      child: _isEditing ? _editForm(t) : _createForm(t),
+      child: _form(t),
     );
   }
 
-  // ------------------------------------------------------------------ create
+  // -------------------------------------------------------------------- form
 
-  Widget _createForm(Translator t) {
+  Widget _form(Translator t) {
     final accounts = ref.watch(accountsProvider);
 
     return accounts.when(
@@ -262,11 +261,11 @@ class _RecurringRuleEditorScreenState
               title: t('recurring.noAccounts'),
               body: t('recurring.noAccountsBody'),
             )
-          : _createBody(t, list),
+          : _body(t, list),
     );
   }
 
-  Widget _createBody(Translator t, List<Account> accounts) {
+  Widget _body(Translator t, List<Account> accounts) {
     final locale = ref.watch(localeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final categories = ref.watch(categoriesProvider);
@@ -428,8 +427,6 @@ class _RecurringRuleEditorScreenState
               ),
           ],
         ),
-        const SizedBox(height: 8),
-        _Note(text: t('recurring.weeklyNote')),
         const SizedBox(height: 16),
         SectionHeader(title: t('recurring.interval')),
         _Stepper(
@@ -472,6 +469,36 @@ class _RecurringRuleEditorScreenState
           const SizedBox(height: 8),
           _Note(text: t('recurring.dayOfMonthNote')),
         ],
+        if (_frequency.usesDayOfWeek) ...[
+          const SizedBox(height: 20),
+          SectionHeader(title: t('recurring.dayOfWeek')),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              NeonChip(
+                key: const ValueKey('recurring-weekday-none'),
+                label: t('recurring.weekdayFromStart'),
+                accent: recurringAccentFor(NeonPalette.amber, isDark: isDark),
+                selected: _dayOfWeek == null,
+                onTap: () => setState(() => _dayOfWeek = null),
+              ),
+              // Sunday first, because the wire is 0-based on Sunday and a chip
+              // row that started elsewhere would put the labels out of step
+              // with the number being sent.
+              for (var day = 0; day < 7; day++)
+                NeonChip(
+                  key: ValueKey('recurring-weekday-$day'),
+                  label: t(weekdayKey(day)),
+                  accent: recurringAccentFor(NeonPalette.amber, isDark: isDark),
+                  selected: _dayOfWeek == day,
+                  onTap: () => setState(() => _dayOfWeek = day),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _Note(text: t('recurring.weeklyNote')),
+        ],
         const SizedBox(height: 20),
         SectionHeader(title: t('recurring.startsAt')),
         _DateField(
@@ -480,6 +507,10 @@ class _RecurringRuleEditorScreenState
           onPick: () => _pickDate(isStart: true),
           onClear: null,
         ),
+        if (_isEditing) ...[
+          const SizedBox(height: 8),
+          _Note(text: t('recurring.startsAtNote')),
+        ],
         const SizedBox(height: 16),
         SectionHeader(title: t('recurring.endsAt')),
         _DateField(
@@ -500,90 +531,16 @@ class _RecurringRuleEditorScreenState
           value: _autoPost,
           onChanged: (value) => setState(() => _autoPost = value),
         ),
-        const SizedBox(height: 26),
-        NeonButton(
-          key: const ValueKey('recurring-save'),
-          label: t('recurring.save'),
-          icon: Icons.save_rounded,
-          expand: true,
-          busy: _busy,
-          onPressed: _busy ? null : _save,
-        ),
-        if (_errorKey != null) _InlineError(message: t(_errorKey!)),
-      ],
-    );
-  }
-
-  // -------------------------------------------------------------------- edit
-
-  Widget _editForm(Translator t) {
-    final rule = widget.existing!;
-    final locale = ref.watch(localeProvider);
-
-    return ListView(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
-      children: [
-        SectionHeader(title: t('recurring.name')),
-        TextField(
-          key: const ValueKey('recurring-name'),
-          controller: _name,
-          decoration: InputDecoration(hintText: t('recurring.nameHint')),
-        ),
-        const SizedBox(height: 20),
-        SectionHeader(title: t('recurring.schedule')),
-        _Note(text: t('recurring.scheduleLocked')),
-        const SizedBox(height: 10),
-        DetailRow(
-          label: t('recurring.frequency'),
-          value: scheduleSummary(
-            rule.frequency,
-            rule.interval,
-            rule.dayOfMonth,
-            t: t,
-            locale: locale,
+        // A rule that does not exist yet cannot be paused, and offering the
+        // switch would only ask the user to create something already stopped.
+        if (_isEditing)
+          _SwitchRow(
+            rowKey: 'recurring-paused',
+            label: t('recurring.paused'),
+            note: t('recurring.pausedNote'),
+            value: _isPaused,
+            onChanged: (value) => setState(() => _isPaused = value),
           ),
-        ),
-        DetailRow(
-          label: t('recurring.startsAt'),
-          value: DateFormatter.short(rule.startsAt, locale),
-        ),
-        DetailRow(
-          label: t('recurring.transactionType'),
-          value: t(transactionTypeKey(rule.template.type)),
-        ),
-        DetailRow(
-          label: t('tx.amount'),
-          value:
-              MoneyFormatter.format(rule.template.amount, locale: locale.code),
-          strong: true,
-        ),
-        const SizedBox(height: 20),
-        SectionHeader(title: t('recurring.endsAt')),
-        _DateField(
-          fieldKey: 'recurring-ends',
-          value: _endsAt == null
-              ? t('recurring.endsNever')
-              : DateFormatter.short(_endsAt!, locale),
-          onPick: () => _pickDate(isStart: false),
-          onClear:
-              _endsAt == null ? null : () => setState(() => _endsAt = null),
-        ),
-        const SizedBox(height: 20),
-        SectionHeader(title: t('recurring.behaviour')),
-        _SwitchRow(
-          rowKey: 'recurring-auto-post',
-          label: t('recurring.autoPost'),
-          note: t('recurring.autoPostNote'),
-          value: _autoPost,
-          onChanged: (value) => setState(() => _autoPost = value),
-        ),
-        _SwitchRow(
-          rowKey: 'recurring-paused',
-          label: t('recurring.paused'),
-          note: t('recurring.pausedNote'),
-          value: _isPaused,
-          onChanged: (value) => setState(() => _isPaused = value),
-        ),
         const SizedBox(height: 26),
         NeonButton(
           key: const ValueKey('recurring-save'),
