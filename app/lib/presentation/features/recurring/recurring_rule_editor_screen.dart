@@ -77,6 +77,17 @@ class _RecurringRuleEditorScreenState
 
   bool get _isEditing => widget.existing != null;
 
+  /// True when the rule points at an account that is not in the list.
+  ///
+  /// Selecting nothing would be a lie: the id is still stored and is resent
+  /// unchanged on save, so the account has not been cleared — it just cannot
+  /// be named here.
+  bool _unknownAccount(List<Account> accounts) {
+    final id = _accountId;
+
+    return id != null && accounts.every((account) => account.id != id);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -247,12 +258,19 @@ class _RecurringRuleEditorScreenState
 
     return accounts.when(
       loading: () => const ModuleLoading(),
-      error: (error, _) => noticeForFailure(
-        error,
-        t: t,
-        permissionTitle: t('recurring.noAccessTitle'),
-        permissionBody: t('recurring.noAccessBody'),
-      ),
+      // Editing does not actually need the account list: every field was
+      // populated from the rule itself, and the account id is resent
+      // unchanged. Refusing the whole screen would take away renaming and
+      // pausing — the two things most likely to be wanted when something
+      // else is already failing.
+      error: (error, _) => _isEditing
+          ? _reducedForm(t)
+          : noticeForFailure(
+              error,
+              t: t,
+              permissionTitle: t('recurring.noAccessTitle'),
+              permissionBody: t('recurring.noAccessBody'),
+            ),
       data: (list) => list.isEmpty
           // Nothing to post into. Saying so beats a form whose only required
           // field cannot be filled.
@@ -262,6 +280,67 @@ class _RecurringRuleEditorScreenState
               body: t('recurring.noAccountsBody'),
             )
           : _body(t, list),
+    );
+  }
+
+  /// What can still be edited when the account list will not load.
+  ///
+  /// Deliberately the same four fields the API accepted before the schedule
+  /// and template became editable, because they are exactly the ones that do
+  /// not depend on knowing which accounts exist.
+  Widget _reducedForm(Translator t) {
+    return ListView(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 40),
+      children: [
+        NoticePanel(
+          icon: Icons.cloud_off_rounded,
+          title: t('recurring.reducedTitle'),
+          body: t('recurring.reducedBody'),
+        ),
+        const SizedBox(height: 20),
+        SectionHeader(title: t('recurring.name')),
+        TextField(
+          key: const ValueKey('recurring-name'),
+          controller: _name,
+          decoration: InputDecoration(hintText: t('recurring.nameHint')),
+        ),
+        const SizedBox(height: 20),
+        SectionHeader(title: t('recurring.endsAt')),
+        _DateField(
+          fieldKey: 'recurring-ends',
+          value: _endsAt == null
+              ? t('recurring.endsNever')
+              : DateFormatter.short(_endsAt!, ref.watch(localeProvider)),
+          onPick: () => _pickDate(isStart: false),
+          onClear: _endsAt == null ? null : () => setState(() => _endsAt = null),
+        ),
+        const SizedBox(height: 20),
+        SectionHeader(title: t('recurring.behaviour')),
+        _SwitchRow(
+          rowKey: 'recurring-auto-post',
+          label: t('recurring.autoPost'),
+          note: t('recurring.autoPostNote'),
+          value: _autoPost,
+          onChanged: (value) => setState(() => _autoPost = value),
+        ),
+        _SwitchRow(
+          rowKey: 'recurring-paused',
+          label: t('recurring.paused'),
+          note: t('recurring.pausedNote'),
+          value: _isPaused,
+          onChanged: (value) => setState(() => _isPaused = value),
+        ),
+        const SizedBox(height: 26),
+        NeonButton(
+          key: const ValueKey('recurring-save'),
+          label: t('recurring.save'),
+          icon: Icons.save_rounded,
+          expand: true,
+          busy: _busy,
+          onPressed: _busy ? null : _save,
+        ),
+        if (_errorKey != null) _InlineError(message: t(_errorKey!)),
+      ],
     );
   }
 
@@ -311,6 +390,20 @@ class _RecurringRuleEditorScreenState
           spacing: 8,
           runSpacing: 8,
           children: [
+            // A rule can point at an account this list does not contain — one
+            // that was archived, or that belongs to a workspace the caller can
+            // no longer see. The id is preserved and resent either way, so the
+            // chip exists to say that out loud; without it the row simply
+            // renders with nothing selected and looks like a form the user
+            // forgot to fill in.
+            if (_unknownAccount(accounts))
+              NeonChip(
+                key: const ValueKey('recurring-account-unknown'),
+                label: t('recurring.accountUnavailable'),
+                accent: recurringAccentFor(NeonPalette.amber, isDark: isDark),
+                selected: true,
+                icon: Icons.help_outline_rounded,
+              ),
             for (final account in accounts)
               NeonChip(
                 key: ValueKey('recurring-account-${account.id}'),
@@ -324,6 +417,13 @@ class _RecurringRuleEditorScreenState
               ),
           ],
         ),
+        if (_unknownAccount(accounts)) ...[
+          const SizedBox(height: 8),
+          Text(
+            t('recurring.accountUnavailableHint'),
+            style: const TextStyle(fontSize: 11.5, height: 1.4, color: NeonPalette.textMuted),
+          ),
+        ],
         if (_type == TransactionType.transfer) ...[
           const SizedBox(height: 20),
           SectionHeader(title: t('recurring.counterAccount')),

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:finora/core/i18n/app_locale.dart';
+import 'package:finora/data/ledger_repository.dart' show accountsProvider;
 import 'package:finora/data/recurring_repository.dart';
 import 'package:finora/presentation/features/recurring/recurring_rule_editor_screen.dart';
 import 'package:finora/presentation/features/recurring/recurring_screen.dart';
@@ -582,4 +583,84 @@ void main() {
       isFalse,
     );
   });
+
+  testWidgets('an account this list does not contain is marked, not blanked',
+      (tester) async {
+    final adapter = recurringServer(
+      onWrite: (options) => MockAdapter.json({'data': recurringJson(id: 'r-gone')}),
+    );
+
+    // Archived, or in a workspace the caller can no longer see. The id is
+    // still stored and is resent unchanged, so rendering the row with nothing
+    // selected would read as a form the user forgot to fill in.
+    final existing = recurringJson(id: 'r-gone');
+    (existing['template']! as Map<String, Object?>)['account_id'] = 'acc-archived';
+
+    await pumpFeature(
+      tester,
+      RecurringRuleEditorScreen(existing: RecurringRule.fromJson(existing)),
+      locale: AppLocale.en,
+      adapter: adapter,
+    );
+
+    expect(
+      find.byKey(const ValueKey('recurring-account-unknown')),
+      findsOneWidget,
+    );
+
+    await tapKey(tester, 'recurring-save');
+
+    // Saving keeps the account rather than silently reassigning the rule to
+    // whichever account happens to be first in the list.
+    final body = bodyOf(
+      adapter.requests.lastWhere((request) => request.method == 'PATCH'),
+    );
+    final template = body['template']! as Map<String, Object?>;
+
+    expect(template['account_id'], 'acc-archived');
+  });
+
+  testWidgets('a failed account list still allows renaming and pausing',
+      (tester) async {
+    final adapter = recurringServer(
+      onWrite: (options) => MockAdapter.json({'data': recurringJson(id: 'r-rent')}),
+    );
+
+    await pumpFeature(
+      tester,
+      RecurringRuleEditorScreen(
+        existing: RecurringRule.fromJson(recurringJson(id: 'r-rent')),
+      ),
+      locale: AppLocale.en,
+      adapter: adapter,
+      extraOverrides: [
+        accountsProvider.overrideWith((ref) => Future.error(Exception('offline'))),
+      ],
+    );
+    await tester.pump();
+
+    // The rule already carries every value it needs, so refusing the whole
+    // screen would remove renaming and pausing — the two things most likely
+    // to be wanted while something else is failing.
+    expect(find.byKey(const ValueKey('recurring-name')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recurring-paused')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recurring-amount')), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('recurring-name')),
+      'Rent, renamed',
+    );
+    await tapKey(tester, 'recurring-save');
+
+    final body = bodyOf(
+      adapter.requests.lastWhere((request) => request.method == 'PATCH'),
+    );
+    final template = body['template']! as Map<String, Object?>;
+
+    expect(body['name'], 'Rent, renamed');
+    // The parts it could not show are sent back exactly as they came.
+    expect(template['account_id'], 'acc-bank');
+    expect(template['amount'], 250000);
+  });
+
 }
