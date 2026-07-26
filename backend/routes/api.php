@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\MemberController;
@@ -17,19 +14,9 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
-        Route::get('me', function (Request $request): JsonResponse {
-            // Behind auth:sanctum, so a null user here is a routing mistake.
-            $user = $request->user() ?? throw new AuthenticationException;
-
-            return response()->json([
-                'data' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'locale' => $user->locale ?? 'fa',
-                ],
-            ]);
-        });
+        // `/me` lives in DataOps' AccountController: the account's own
+        // lifecycle — including a scheduled deletion — is that module's, and
+        // two routes for one path meant the first one registered quietly won.
 
         // Workspace listing cannot itself require a workspace header — this is
         // how the client discovers which ids it may send.

@@ -31,6 +31,11 @@ enum RecurringFrequency {
   /// rule counts from the last run.
   bool get usesDayOfMonth =>
       this == RecurringFrequency.monthly || this == RecurringFrequency.yearly;
+
+  /// Only a weekly rule reads `day_of_week`. The server places the occurrence
+  /// on that weekday *within* the week the interval reaches, so asking for a
+  /// Tuesday never stretches a fortnightly rule to fifteen days.
+  bool get usesDayOfWeek => this == RecurringFrequency.weekly;
 }
 
 /// The transaction a rule posts each time it comes due.
@@ -48,6 +53,7 @@ final class RecurringTemplate {
     this.categoryId,
     this.description,
     this.payee,
+    this.tags = const [],
   });
 
   final TransactionType type;
@@ -57,6 +63,11 @@ final class RecurringTemplate {
   final String? categoryId;
   final String? description;
   final String? payee;
+
+  /// Read back and written out untouched. No screen here edits tags, but a
+  /// `PATCH` carrying a template replaces the stored one wholesale — so
+  /// dropping them on the way through would delete tags another client set.
+  final List<String> tags;
 
   Map<String, Object?> toJson() => {
         'type': type.name,
@@ -73,6 +84,7 @@ final class RecurringTemplate {
         if (description != null && description!.isNotEmpty)
           'description': description,
         if (payee != null && payee!.isNotEmpty) 'payee': payee,
+        if (tags.isNotEmpty) 'tags': tags,
       };
 
   static RecurringTemplate fromJson(Map<String, Object?> json) {
@@ -91,6 +103,10 @@ final class RecurringTemplate {
       categoryId: json['category_id'] as String?,
       description: json['description'] as String?,
       payee: json['payee'] as String?,
+      tags: [
+        for (final tag in json['tags'] as List? ?? const [])
+          if (tag is String && tag.isNotEmpty) tag,
+      ],
     );
   }
 }
@@ -105,6 +121,7 @@ final class RecurringRule {
     this.name,
     this.interval = 1,
     this.dayOfMonth,
+    this.dayOfWeek,
     this.endsAt,
     this.nextRunAt,
     this.lastRunAt,
@@ -121,6 +138,10 @@ final class RecurringRule {
   /// Clamped by the server to the length of the month — "the 31st" in February
   /// is the 28th, not a skipped month.
   final int? dayOfMonth;
+
+  /// 0 = Sunday, the basis the API validates against. Weekly rules only; null
+  /// leaves an occurrence on whatever weekday the rule started on.
+  final int? dayOfWeek;
   final DateTime startsAt;
   final DateTime? endsAt;
 
@@ -142,14 +163,18 @@ final class RecurringRule {
 
   bool get isRunning => !isPaused && !hasEnded;
 
+  /// Every field the API accepts, including the ones this frequency does not
+  /// use — sent as null rather than left out. Switching a monthly rule to
+  /// weekly has to clear the day of the month it no longer honours, and an
+  /// omitted key on a `PATCH` means "leave it alone", not "forget it".
   Map<String, Object?> toJson() => {
         if (id.isNotEmpty) 'id': id,
         'name': name,
         'template': template.toJson(),
         'frequency': frequency.wire,
         'interval': interval,
-        if (frequency.usesDayOfMonth && dayOfMonth != null)
-          'day_of_month': dayOfMonth,
+        'day_of_month': frequency.usesDayOfMonth ? dayOfMonth : null,
+        'day_of_week': frequency.usesDayOfWeek ? dayOfWeek : null,
         'starts_at': _dateOnly(startsAt),
         'ends_at': endsAt == null ? null : _dateOnly(endsAt!),
         'auto_post': autoPost,
@@ -168,6 +193,7 @@ final class RecurringRule {
         frequency: RecurringFrequency.parse(json['frequency'] as String?),
         interval: _intOf(json['interval']) ?? 1,
         dayOfMonth: _intOf(json['day_of_month']),
+        dayOfWeek: _intOf(json['day_of_week']),
         startsAt: _dateOf(json['starts_at']) ?? DateTime.now(),
         endsAt: _dateOf(json['ends_at']),
         nextRunAt: _dateOf(json['next_run_at']),
@@ -216,13 +242,31 @@ final class RecurringRepository {
     return RecurringRule.fromJson(_data(response));
   }
 
-  /// The four fields `RecurringRuleController::update()` validates, and no
-  /// others.
+  /// The whole rule, in one `PATCH`, keeping its id and its posting history.
   ///
-  /// The schedule and the template are not among them: once a rule exists the
-  /// server will not change what it posts or when, so this signature refuses to
-  /// pretend otherwise. Sending `ends_at: null` clears the end date, which is
-  /// why it is passed as a flag rather than inferred from a null argument.
+  /// Everything the editor holds goes out together — template, schedule and
+  /// flags — because a half-applied edit is the failure mode this endpoint
+  /// exists to remove. [RecurringRule.toJson] names every field the API
+  /// accepts, so a value the new frequency stops using is cleared rather than
+  /// left behind.
+  ///
+  /// `starts_at` only moves the cursor on a rule that has not run yet; one that
+  /// has already posted keeps its place, and nothing here pretends otherwise.
+  Future<RecurringRule> save(RecurringRule rule) async {
+    final body = {...rule.toJson()}..remove('id');
+
+    final response = await _guard(
+      () => client.patch('/recurring-rules/${rule.id}', body: body),
+    );
+
+    return RecurringRule.fromJson(_data(response));
+  }
+
+  /// One field at a time, for the list screen: the row that pauses a rule has
+  /// no business resending a template it never showed anyone.
+  ///
+  /// Sending `ends_at: null` clears the end date, which is why it is passed as
+  /// a flag rather than inferred from a null argument.
   Future<RecurringRule> update(
     String id, {
     String? name,

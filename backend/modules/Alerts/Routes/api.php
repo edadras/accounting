@@ -16,6 +16,7 @@ Route::prefix('api/v1')
         // Before alerts/{id}: these are collections, not alert ids.
         Route::get('alerts/rules', [AlertRuleController::class, 'index']);
         Route::post('alerts/rules', [AlertRuleController::class, 'store']);
+        Route::patch('alerts/rules/{id}', [AlertRuleController::class, 'update']);
         Route::delete('alerts/rules/{id}', [AlertRuleController::class, 'destroy']);
 
         Route::get('alerts/preferences', [AlertPreferenceController::class, 'show']);

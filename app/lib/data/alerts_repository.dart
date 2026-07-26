@@ -410,19 +410,37 @@ final class AlertsRepository {
   Future<void> deleteRule(String id) =>
       _guard(() => client.delete('/alerts/rules/$id'));
 
-  /// Edits a rule the only way the API allows: there is no PUT or PATCH on
-  /// `alerts/rules`, and POSTing an id that already exists collides with its
-  /// own primary key. So the old row is removed and rewritten under the same
-  /// ULID, which keeps the rule's identity stable for anything holding a
-  /// reference to it.
+  /// One request, one outcome: the rule is either edited or untouched.
   ///
-  /// Not atomic, and cannot be made atomic from this side: if the write fails
-  /// the rule is gone, so the caller must show the failure rather than swallow
-  /// it.
-  Future<AlertRule> replaceRule(AlertRule rule) async {
-    await deleteRule(rule.id);
-    return createRule(rule);
+  /// Every field is optional, so an omitted one keeps its stored value. [type]
+  /// is not among them and never will be — it decides which scanner reads the
+  /// rule and therefore what [AlertRule.config] means, so the server answers a
+  /// changed type with 422 rather than reinterpreting the config it already
+  /// holds.
+  Future<AlertRule> updateRule(
+    String id, {
+    Map<String, Object?>? config,
+    List<AlertChannel>? channels,
+    int? leadDays,
+    bool? isActive,
+  }) async {
+    final response = await _guard(
+      () => client.patch('/alerts/rules/$id', body: {
+        if (config != null) 'config': config,
+        if (channels != null)
+          'channels': [for (final channel in channels) channel.wire],
+        if (leadDays != null) 'lead_days': leadDays,
+        if (isActive != null) 'is_active': isActive,
+      },),
+    );
+
+    return AlertRule.fromJson(_data(response));
   }
+
+  /// Pausing a rule stops it firing without losing what it watches, so it is
+  /// the one flag flipped on its own rather than through the editor.
+  Future<AlertRule> setRuleActive(String id, {required bool active}) =>
+      updateRule(id, isActive: active);
 
   Future<AlertPreferences> preferences() async {
     final response = await _guard(() => client.get('/alerts/preferences'));

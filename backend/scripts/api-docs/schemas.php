@@ -829,6 +829,12 @@ return [
     'User' => $obj([
         'id' => $int(), 'name' => $str(), 'email' => ['type' => 'string', 'format' => 'email'],
         'locale' => $enum(['fa', 'en', 'tr', 'ar']),
+        'deletion' => ['type' => ['object', 'null'], 'description' => 'Present only while an erasure is scheduled. Nothing is erased before `purge_after`.', 'properties' => [
+            'status' => $enum(['deletion_scheduled']),
+            'grace_days' => $int(),
+            'requested_at' => $dt(),
+            'purge_after' => $dt('The moment it stops being reversible.'),
+        ]],
     ], ['id', 'name', 'email']),
 
     'AuthSuccess' => $obj([

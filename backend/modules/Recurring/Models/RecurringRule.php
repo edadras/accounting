@@ -107,7 +107,7 @@ final class RecurringRule extends Model
 
         $next = match ($this->frequency) {
             self::DAILY => $moment->addDays($interval),
-            self::WEEKLY => $moment->addWeeks($interval),
+            self::WEEKLY => $this->onRequestedWeekday($moment->addWeeks($interval)),
             self::MONTHLY => $this->onRequestedDay($moment->addMonthsNoOverflow($interval)),
             self::YEARLY => $this->onRequestedDay($moment->addYearsNoOverflow($interval)),
             default => throw RecurringException::unknownFrequency((string) $this->frequency),
@@ -183,5 +183,26 @@ final class RecurringRule extends Model
         }
 
         return $moment->day(min($this->day_of_month, $moment->daysInMonth));
+    }
+
+    /**
+     * Pins a weekly occurrence to `day_of_week`, staying inside the week it
+     * landed in.
+     *
+     * Without this the column was accepted, stored and then ignored: a weekly
+     * rule simply repeated whatever weekday it started on, so "every other
+     * Tuesday" set up on a Monday stayed Monday forever. Adjusting within the
+     * week rather than seeking forwards keeps the interval exact — seeking
+     * would silently stretch a fortnightly rule to fifteen days.
+     */
+    private function onRequestedWeekday(CarbonImmutable $moment): CarbonImmutable
+    {
+        if ($this->day_of_week === null) {
+            return $moment;
+        }
+
+        // Carbon counts Sunday as 0, which is the same basis the API validates
+        // against, so no translation is needed here.
+        return $moment->subDays($moment->dayOfWeek)->addDays($this->day_of_week);
     }
 }

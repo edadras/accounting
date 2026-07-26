@@ -6,6 +6,7 @@ namespace Tests\Feature\Recurring;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\PendingCommand;
+use Laravel\Sanctum\Sanctum;
 use Modules\Core\Models\Workspace;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
@@ -210,6 +211,81 @@ final class RecurringTest extends LedgerTestCase
         $this->assertInstanceOf(PendingCommand::class, $pending);
 
         return $pending;
+    }
+
+    #[Test]
+    public function a_weekly_rule_lands_on_the_requested_weekday(): void
+    {
+        [$workspace, $account] = $this->world('weekday@example.test');
+
+        // Set up on a Monday, asking for Tuesday. `day_of_week` was validated
+        // and stored and then never read, so the rule simply repeated the day
+        // it started on — "every other Tuesday" quietly ran every Monday.
+        $rule = $this->rule($workspace, $account, [
+            'frequency' => RecurringRule::WEEKLY,
+            'interval' => 2,
+            'day_of_week' => 2,
+            'starts_at' => '2026-07-06 09:00:00',
+        ]);
+
+        $next = $rule->occurrenceAfter(new \DateTimeImmutable('2026-07-06 09:00:00'));
+
+        $this->assertNotNull($next);
+        $this->assertSame('2026-07-21', $next->toDateString());
+        $this->assertSame(2, $next->dayOfWeek);
+    }
+
+    #[Test]
+    public function a_weekly_rule_without_a_weekday_keeps_its_own_day(): void
+    {
+        [$workspace, $account] = $this->world('weekday-null@example.test');
+
+        $rule = $this->rule($workspace, $account, [
+            'frequency' => RecurringRule::WEEKLY,
+            'interval' => 1,
+            'day_of_week' => null,
+            'starts_at' => '2026-07-06 09:00:00',
+        ]);
+
+        $next = $rule->occurrenceAfter(new \DateTimeImmutable('2026-07-06 09:00:00'));
+
+        $this->assertNotNull($next);
+        $this->assertSame('2026-07-13', $next->toDateString());
+    }
+
+    #[Test]
+    public function the_schedule_and_the_template_can_be_edited(): void
+    {
+        [$workspace, $account] = $this->world('recurring-patch@example.test');
+        $rule = $this->rule($workspace, $account);
+
+        $owner = $workspace->owner;
+        $this->assertNotNull($owner);
+        Sanctum::actingAs($owner);
+
+        $this->patchJson("/api/v1/recurring-rules/{$rule->id}", [
+            'frequency' => RecurringRule::WEEKLY,
+            'interval' => 2,
+            'day_of_week' => 4,
+            'template' => [
+                'type' => Transaction::TYPE_EXPENSE,
+                'account_id' => $account->id,
+                'amount' => 250_00,
+                'currency' => 'TRY',
+                'description' => 'Rent, raised',
+            ],
+        ], ['X-Workspace-Id' => $workspace->id])
+            ->assertOk()
+            ->assertJsonPath('data.frequency', RecurringRule::WEEKLY)
+            ->assertJsonPath('data.interval', 2);
+
+        // Same rule, not a replacement: changing an amount used to mean
+        // deleting the rule and rebuilding it, losing its id and its history.
+        $this->assertSame(1, RecurringRule::withoutGlobalScopes()
+            ->where('workspace_id', $workspace->id)->count());
+
+        $fresh = $this->inWorkspace($workspace, fn () => RecurringRule::query()->findOrFail($rule->id));
+        $this->assertSame(250_00, $fresh->template['amount']);
     }
 
     /** @return array{0: Workspace, 1: Account} */

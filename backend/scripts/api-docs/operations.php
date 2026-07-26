@@ -1103,13 +1103,29 @@ return [
         ], ['template', 'frequency', 'starts_at']),
         'responses' => [201 => $res('Created.', $data($R('RecurringRule'))), 403 => ['$ref' => '#/components/responses/Forbidden']]],
     'PATCH /api/v1/recurring-rules/{rule}' => ['id' => 'updateRecurringRule', 'tag' => 'Recurring', 'summary' => 'Update a recurring rule',
-        'description' => 'Only the fields that can safely change after postings exist. The template and '
-            .'the schedule are immutable — editing them would retroactively change what the already '
-            .'posted occurrences were supposed to be.',
+        'description' => 'The schedule and the template are editable. Already-posted occurrences are never '
+            .'rewritten — a rule that has run keeps its cursor, so moving `starts_at` afterwards changes '
+            .'nothing about what was already posted and cannot replay or skip an occurrence.',
         'body' => $body([
             'name' => $str('', ['maxLength' => 120]),
             'ends_at' => $dt(),
             'auto_post' => $bool(), 'is_paused' => $bool(),
+            'template' => $body([
+                'type' => $enum(['income', 'expense', 'transfer']),
+                'account_id' => $ulidIn('The account the occurrence posts to.'),
+                'counter_account_id' => $ulidIn('The other side, for a transfer.'),
+                'category_id' => $ulidIn('Category for the posted transaction.'),
+                'amount' => $int('INTEGER in the currency\'s minor units.', ['minimum' => 1]),
+                'currency' => $currencyIn('Currency of the occurrence.'),
+                'description' => $str('', ['maxLength' => 255]),
+                'payee' => $str('', ['maxLength' => 255]),
+                'tags' => ['type' => 'array', 'items' => ['type' => 'string']],
+            ], ['type', 'account_id', 'amount', 'currency']),
+            'frequency' => $enum(['daily', 'weekly', 'monthly', 'yearly']),
+            'interval' => $int('Every N periods.', ['minimum' => 1, 'maximum' => 365]),
+            'day_of_month' => $int('Clamped to the length of a short month.', ['minimum' => 1, 'maximum' => 31]),
+            'day_of_week' => $int('0 = Sunday. Honoured for a weekly rule; the occurrence is placed on this day within the week the interval lands in, so the interval stays exact.', ['minimum' => 0, 'maximum' => 6]),
+            'starts_at' => $date('Only moves the cursor on a rule that has not run yet.'),
         ]),
         'responses' => [200 => $res('Updated.', $data($R('RecurringRule'))), 403 => ['$ref' => '#/components/responses/Forbidden'], 404 => $res('`recurring_rule_not_found`.', $R('Error'))]],
     'DELETE /api/v1/recurring-rules/{rule}' => ['id' => 'deleteRecurringRule', 'tag' => 'Recurring', 'summary' => 'Delete a recurring rule',
@@ -1292,6 +1308,21 @@ return [
             'is_active' => $bool(),
         ], ['type']),
         'responses' => [201 => $res('Created.', $data($R('AlertRule')))]],
+    'PATCH /api/v1/alerts/rules/{id}' => ['id' => 'updateAlertRule', 'tag' => 'Alerts', 'summary' => 'Edit an alert rule',
+        'description' => 'Edits in place, keeping the id. `type` cannot change: it decides which scanner reads the '
+            .'rule and therefore what `config` means, so switching it would reinterpret the stored config rather '
+            .'than edit it.',
+        'body' => $body([
+            'config' => ['type' => 'object', 'additionalProperties' => true, 'description' => 'Scanner-specific settings; the shape depends on the rule\'s type.'],
+            'channels' => ['type' => 'array', 'items' => $enum(['database', 'push', 'email', 'sms', 'telegram', 'whatsapp'])],
+            'lead_days' => $int('How many days ahead a due-date scanner warns.', ['minimum' => 0, 'maximum' => 365]),
+            'is_active' => $bool('Pausing a rule stops it firing without losing its settings.'),
+        ]),
+        'responses' => [
+            200 => $res('Updated.', $data($R('AlertRule'))),
+            403 => ['$ref' => '#/components/responses/Forbidden'],
+            404 => ['$ref' => '#/components/responses/NotFound'],
+        ]],
     'DELETE /api/v1/alerts/rules/{id}' => ['id' => 'deleteAlertRule', 'tag' => 'Alerts', 'summary' => 'Delete an alert rule',
         'responses' => [204 => $res('Deleted.'), 404 => $res('`alert_rule_not_found`.', $R('Error'))]],
     'GET /api/v1/alerts/preferences' => ['id' => 'getAlertPreferences', 'tag' => 'Alerts', 'summary' => 'Get alert preferences',
@@ -1386,6 +1417,9 @@ return [
         'description' => 'Revokes the current access token only, leaving the user\'s other devices signed in.',
         'responses' => [204 => $res('Signed out.')]],
     'GET /api/v1/me' => ['id' => 'getMe', 'tag' => 'Core', 'summary' => 'Current user',
+        'description' => 'Carries `deletion` while an account erasure is scheduled — null otherwise. Without it '
+            .'a client could only learn about a pending deletion from the answer to the DELETE that started it, '
+            .'so the grace-period warning disappeared as soon as the app was reopened.',
         'responses' => [200 => $res('The authenticated user.', $data($R('User')))]],
     'GET /api/v1/workspaces' => ['id' => 'listWorkspaces', 'tag' => 'Core', 'summary' => 'List workspaces',
         'description' => 'Deliberately NOT workspace-scoped: this is how a client discovers which ids it '

@@ -24,6 +24,35 @@ final class AccountController
 {
     use ResolvesCurrentUser;
 
+    /**
+     * The signed-in account, including whether it is on its way out.
+     *
+     * The deletion columns were readable only in the response to the DELETE
+     * itself, so the grace-period banner vanished on a cold start and someone
+     * who had scheduled a deletion and reopened the app saw nothing telling
+     * them it was still coming.
+     */
+    public function show(Request $request): JsonResponse
+    {
+        $user = $this->currentUser($request);
+        $purgeAfter = AccountDeletion::purgeAfter($user);
+
+        return response()->json([
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'locale' => $user->locale ?? 'fa',
+                'deletion' => $purgeAfter === null ? null : [
+                    'status' => 'deletion_scheduled',
+                    'grace_days' => (int) config('dataops.deletion.grace_days'),
+                    'requested_at' => AccountDeletion::requestedAt($user)?->toIso8601String(),
+                    'purge_after' => $purgeAfter->toIso8601String(),
+                ],
+            ],
+        ]);
+    }
+
     public function destroy(Request $request, ScheduleAccountDeletion $schedule): JsonResponse
     {
         $data = $request->validate([

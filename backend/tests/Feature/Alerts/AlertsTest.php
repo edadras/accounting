@@ -25,6 +25,7 @@ use Modules\Banking\Models\Loan;
 use Modules\Banking\Models\LoanInstallment;
 use Modules\Budget\Models\Budget;
 use Modules\Core\Models\Workspace;
+use Modules\Core\Support\WorkspaceContext;
 use Modules\Ledger\Actions\RecordTransaction;
 use Modules\Ledger\Models\Account;
 use PHPUnit\Framework\Attributes\Test;
@@ -477,6 +478,63 @@ final class AlertsTest extends LedgerTestCase
             ->where('workspace_id', $workspace->id)
             ->orderBy('created_at')
             ->orderBy('id');
+    }
+
+    #[Test]
+    public function a_rule_is_edited_in_place_rather_than_replaced(): void
+    {
+        [$user, $workspace] = $this->world('rule-patch@example.test');
+        $rule = $this->makeRule($workspace, AlertRule::TYPE_CHECK_DUE);
+
+        Sanctum::actingAs($user);
+
+        $this->patchJson("/api/v1/alerts/rules/{$rule->id}", [
+            'lead_days' => 7,
+            'is_active' => false,
+        ], ['X-Workspace-Id' => $workspace->id])
+            ->assertOk()
+            ->assertJsonPath('data.id', $rule->id)
+            ->assertJsonPath('data.lead_days', 7)
+            ->assertJsonPath('data.is_active', false);
+
+        // The point of the endpoint: there was no way to edit a rule at all,
+        // not even to pause one, so the client had to delete and recreate —
+        // and a failure halfway through simply lost the rule.
+        $this->assertSame(1, AlertRule::withoutGlobalScopes()
+            ->where('workspace_id', $workspace->id)->count());
+    }
+
+    #[Test]
+    public function a_rule_cannot_change_type(): void
+    {
+        [$user, $workspace] = $this->world('rule-type@example.test');
+        $rule = $this->makeRule($workspace, AlertRule::TYPE_CHECK_DUE);
+
+        Sanctum::actingAs($user);
+
+        // `type` decides which scanner reads the rule and therefore what its
+        // config even means, so switching it reinterprets the stored config
+        // instead of editing it.
+        $this->patchJson("/api/v1/alerts/rules/{$rule->id}", [
+            'type' => AlertRule::TYPE_LOW_BALANCE,
+        ], ['X-Workspace-Id' => $workspace->id])->assertStatus(422);
+    }
+
+    #[Test]
+    public function another_workspace_cannot_edit_a_rule(): void
+    {
+        [, $workspace] = $this->world('rule-victim@example.test');
+        $rule = $this->makeRule($workspace, AlertRule::TYPE_CHECK_DUE);
+
+        $intruder = $this->makeUser('rule-intruder@example.test');
+        $theirs = $this->makeWorkspace($intruder, 'Theirs');
+
+        app(WorkspaceContext::class)->forget();
+        Sanctum::actingAs($intruder);
+
+        $this->patchJson("/api/v1/alerts/rules/{$rule->id}", ['lead_days' => 1], [
+            'X-Workspace-Id' => $theirs->id,
+        ])->assertNotFound();
     }
 
     /** @return array{0: User, 1: Workspace, 2: Account} */

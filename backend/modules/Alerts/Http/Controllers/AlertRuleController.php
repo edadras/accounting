@@ -7,6 +7,7 @@ namespace Modules\Alerts\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Modules\Alerts\Exceptions\AlertException;
 use Modules\Alerts\Http\Requests\StoreAlertRuleRequest;
+use Modules\Alerts\Http\Requests\UpdateAlertRuleRequest;
 use Modules\Alerts\Http\Resources\AlertRuleResource;
 use Modules\Alerts\Models\AlertRule;
 
@@ -33,6 +34,15 @@ final class AlertRuleController
         $rule->fill($data)->save();
 
         return (new AlertRuleResource($rule))->response()->setStatusCode(201);
+    }
+
+    public function update(UpdateAlertRuleRequest $request, string $id): JsonResponse
+    {
+        $rule = AlertRule::query()->find($id) ?? throw AlertException::ruleNotFound($id);
+
+        $rule->fill($request->validated())->save();
+
+        return (new AlertRuleResource($rule))->response();
     }
 
     public function destroy(string $id): JsonResponse

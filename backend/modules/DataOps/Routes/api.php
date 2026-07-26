@@ -12,6 +12,7 @@ Route::prefix('api/v1')
     ->group(function (): void {
         // An account spans every workspace it belongs to, so deleting one is
         // not a workspace operation and sits outside that middleware.
+        Route::get('me', [AccountController::class, 'show']);
         Route::delete('me', [AccountController::class, 'destroy']);
         Route::post('me/restore', [AccountController::class, 'restore']);
 

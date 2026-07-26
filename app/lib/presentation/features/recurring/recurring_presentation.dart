@@ -53,17 +53,33 @@ String frequencyKey(RecurringFrequency frequency) => switch (frequency) {
       RecurringFrequency.yearly => 'recurring.freqYearly',
     };
 
+/// The weekday names, on the API's own basis: 0 is Sunday.
+///
+/// Its own list rather than the platform's, because a locale's first day of the
+/// week is a display choice and the wire value is not — reading one off the
+/// other is how a Sunday becomes a Monday.
+String weekdayKey(int dayOfWeek) => switch (dayOfWeek % 7) {
+      0 => 'recurring.weekSun',
+      1 => 'recurring.weekMon',
+      2 => 'recurring.weekTue',
+      3 => 'recurring.weekWed',
+      4 => 'recurring.weekThu',
+      5 => 'recurring.weekFri',
+      _ => 'recurring.weekSat',
+    };
+
 /// "Every 2 months, on the 5th" — the whole schedule in one line.
 ///
-/// Only says what the server can actually compute. There is no weekday in it,
-/// because `occurrenceAfter()` adds whole weeks to the previous occurrence and
-/// never pins one to a Tuesday.
+/// Only says what the server can actually compute, which now includes the
+/// weekday: `occurrenceAfter()` places a weekly occurrence on `day_of_week`
+/// within the week the interval reaches.
 String scheduleSummary(
   RecurringFrequency frequency,
   int interval,
   int? dayOfMonth, {
   required Translator t,
   required AppLocale locale,
+  int? dayOfWeek,
 }) {
   final count = DateFormatter.number(interval < 1 ? 1 : interval, locale.code);
 

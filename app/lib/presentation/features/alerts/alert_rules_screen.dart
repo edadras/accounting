@@ -19,9 +19,9 @@ import 'alerts_providers.dart';
 
 /// What this workspace wants to be warned about.
 ///
-/// One row per rule, and nothing offered that the API cannot do: rules are
-/// created and deleted, so "edit" here rewrites the rule under its own id
-/// rather than pretending a PATCH exists.
+/// One row per rule. Editing and pausing are both a single `PATCH`, so a rule
+/// that fails to save is the rule that was there before — the row never passes
+/// through a moment where it does not exist.
 class AlertRulesScreen extends ConsumerWidget {
   const AlertRulesScreen({super.key});
 
@@ -66,7 +66,7 @@ class _RulesBody extends ConsumerWidget {
         ref,
         () => ref
             .read(alertsRepositoryProvider)
-            .replaceRule(rule.copyWith(isActive: !rule.isActive)),
+            .setRuleActive(rule.id, active: !rule.isActive),
       );
 
   Future<void> _delete(

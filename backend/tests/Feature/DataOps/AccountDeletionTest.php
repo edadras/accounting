@@ -197,4 +197,50 @@ final class AccountDeletionTest extends DataOpsTestCase
             'description' => 'Rent',
         ]));
     }
+
+    #[Test]
+    public function the_account_endpoint_reports_a_pending_deletion(): void
+    {
+        $user = $this->makeUser('cold-start@example.test');
+        $this->makeWorkspace($user);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.email', 'cold-start@example.test')
+            ->assertJsonPath('data.deletion', null);
+
+        $this->deleteJson('/api/v1/me', ['password' => self::PASSWORD])
+            ->assertStatus(202);
+
+        // Re-acting with a fresh instance is what a cold start actually does:
+        // `Sanctum::actingAs` pins one model for the whole test, while a real
+        // request resolves the user from the token on every call.
+        Sanctum::actingAs($user->refresh());
+
+        // The whole point: the deletion state used to live only in the answer
+        // to the DELETE, so reopening the app during the grace period showed
+        // nothing at all about the deletion still coming.
+        $response = $this->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.deletion.status', 'deletion_scheduled')
+            ->assertJsonPath('data.deletion.grace_days', (int) config('dataops.deletion.grace_days'));
+
+        $this->assertNotNull($response->json('data.deletion.purge_after'));
+
+        $this->postJson('/api/v1/me/restore')->assertOk();
+
+        Sanctum::actingAs($user->refresh());
+
+        $this->getJson('/api/v1/me')
+            ->assertOk()
+            ->assertJsonPath('data.deletion', null);
+    }
+
+    #[Test]
+    public function the_account_endpoint_needs_a_token(): void
+    {
+        $this->getJson('/api/v1/me')->assertUnauthorized();
+    }
 }

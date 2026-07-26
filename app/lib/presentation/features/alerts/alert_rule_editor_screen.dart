@@ -15,12 +15,13 @@ import '../more/module_scaffold.dart';
 import 'alert_presentation.dart';
 import 'alerts_providers.dart';
 
-/// Create a rule, or rewrite one.
+/// Create a rule, or edit one.
 ///
-/// `alerts/rules` has no PATCH and no PUT, and a POST carrying an id that
-/// already exists collides with its own primary key. Editing therefore deletes
-/// and re-creates under the same ULID — which is not atomic, so the screen says
-/// so before the user commits to it rather than after it has half-failed.
+/// An edit is a single `PATCH`, so there is nothing to warn about: a save that
+/// fails leaves the rule exactly as it was. The one thing the screen does not
+/// offer on an existing rule is its type, because the type decides which
+/// scanner reads the rule and therefore what its config means — changing it
+/// would reinterpret the settings rather than edit them, which is a new rule.
 class AlertRuleEditorScreen extends ConsumerStatefulWidget {
   const AlertRuleEditorScreen({super.key, this.existing});
 
@@ -77,13 +78,18 @@ class _AlertRuleEditorScreenState extends ConsumerState<AlertRuleEditorScreen> {
   /// Only the keys the scanner for this type actually reads. Carrying a stale
   /// `threshold` on a cheque rule would be a setting the user could see and
   /// nothing would honour.
+  ///
+  /// Merged over whatever the rule already holds rather than written fresh: a
+  /// balance rule can carry a per-account `thresholds` map this screen never
+  /// shows, and replacing the whole object would silently drop a setting the
+  /// user never saw, let alone changed.
   Map<String, Object?>? _config() {
     if (!_type.usesThreshold) return const {};
 
     final parsed = Money.tryParse(_threshold.text, ref.read(baseCurrencyProvider));
     if (parsed == null || parsed.isNegative) return null;
 
-    return {'threshold': parsed.minorUnits};
+    return {...?widget.existing?.config, 'threshold': parsed.minorUnits};
   }
 
   Future<void> _save() async {
@@ -99,22 +105,33 @@ class _AlertRuleEditorScreenState extends ConsumerState<AlertRuleEditorScreen> {
       _errorKey = null;
     });
 
-    final draft = AlertRule(
-      id: widget.existing?.id ?? '',
-      type: _type,
-      config: config,
-      channels: _orderedChannels(),
-      leadDays: _leadDays,
-      isActive: _isActive,
-    );
-
     try {
       final repository = ref.read(alertsRepositoryProvider);
+      final existing = widget.existing;
 
-      if (_isEditing) {
-        await repository.replaceRule(draft);
+      if (existing != null) {
+        // No `type`: it cannot change, and sending the one it already has
+        // would only invite a 422 on a request that changes nothing.
+        await repository.updateRule(
+          existing.id,
+          // Omitted for a kind that has no settings of its own, so the server
+          // keeps whatever it holds instead of being handed an empty object.
+          config: _type.usesThreshold ? config : null,
+          channels: _orderedChannels(),
+          leadDays: _leadDays,
+          isActive: _isActive,
+        );
       } else {
-        await repository.createRule(draft);
+        await repository.createRule(
+          AlertRule(
+            id: '',
+            type: _type,
+            config: config,
+            channels: _orderedChannels(),
+            leadDays: _leadDays,
+            isActive: _isActive,
+          ),
+        );
       }
 
       ref.invalidate(alertRulesProvider);
@@ -174,10 +191,6 @@ class _AlertRuleEditorScreenState extends ConsumerState<AlertRuleEditorScreen> {
                   ),
               ],
             ),
-          if (_isEditing) ...[
-            const SizedBox(height: 6),
-            _Note(text: t('alerts.replaceNote')),
-          ],
           const SizedBox(height: 20),
           if (_type.usesLeadDays) ...[
             SectionHeader(title: t('alerts.leadDays')),

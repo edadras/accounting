@@ -91,9 +91,39 @@ final class RecurringRuleController
             'ends_at' => ['nullable', 'date'],
             'auto_post' => ['sometimes', 'boolean'],
             'is_paused' => ['sometimes', 'boolean'],
+
+            // The schedule and the template are editable too. Accepting only
+            // the four fields above meant changing an amount or a frequency
+            // required deleting the rule and building it again, which loses
+            // its id and its posting history for what is an ordinary edit.
+            'template' => ['sometimes', 'array'],
+            'template.type' => ['required_with:template', Rule::in(Transaction::TYPES)],
+            'template.account_id' => ['required_with:template', 'string', 'size:26'],
+            'template.counter_account_id' => ['nullable', 'string', 'size:26'],
+            'template.category_id' => ['nullable', 'string', 'size:26'],
+            'template.amount' => ['required_with:template', 'integer', 'min:1'],
+            'template.currency' => ['required_with:template', Rule::in(Currency::codes())],
+            'template.description' => ['nullable', 'string', 'max:255'],
+            'template.payee' => ['nullable', 'string', 'max:255'],
+            'template.tags' => ['nullable', 'array'],
+
+            'frequency' => ['sometimes', Rule::in(RecurringRule::FREQUENCIES)],
+            'interval' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:365'],
+            'day_of_month' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:31'],
+            'day_of_week' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:6'],
+            'starts_at' => ['sometimes', 'date'],
         ]);
 
-        $rule->fill($data)->save();
+        $rule->fill($data);
+
+        // A rule that has already run keeps its cursor: rewriting next_run_at
+        // from a moved start date would either replay occurrences that were
+        // posted or skip ones that were not.
+        if (array_key_exists('starts_at', $data) && $rule->last_run_at === null) {
+            $rule->next_run_at = $rule->starts_at;
+        }
+
+        $rule->save();
 
         return response()->json(['data' => $this->present($rule)]);
     }

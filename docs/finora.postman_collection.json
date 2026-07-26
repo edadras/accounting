@@ -1068,6 +1068,70 @@
                     "response": []
                 },
                 {
+                    "name": "Edit an alert rule",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "X-Workspace-Id",
+                                "value": "{{workspace_id}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{locale}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{$guid}}",
+                                "type": "text",
+                                "disabled": true
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/alerts/rules/{id}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "alerts",
+                                "rules",
+                                "{id}"
+                            ],
+                            "query": []
+                        },
+                        "description": "Edit an alert rule\n\nEdits in place, keeping the id. `type` cannot change: it decides which scanner reads the rule and therefore what `config` means, so switching it would reinterpret the stored config rather than edit it.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
                     "name": "Mark an alert read",
                     "request": {
                         "method": "POST",
@@ -5724,7 +5788,7 @@
                             ],
                             "query": []
                         },
-                        "description": "Current user"
+                        "description": "Current user\n\nCarries `deletion` while an account erasure is scheduled — null otherwise. Without it a client could only learn about a pending deletion from the answer to the DELETE that started it, so the grace-period warning disappeared as soon as the app was reopened."
                     },
                     "response": []
                 },
@@ -8975,7 +9039,7 @@
                             ],
                             "query": []
                         },
-                        "description": "Update a recurring rule\n\nOnly the fields that can safely change after postings exist. The template and the schedule are immutable — editing them would retroactively change what the already posted occurrences were supposed to be.",
+                        "description": "Update a recurring rule\n\nThe schedule and the template are editable. Already-posted occurrences are never rewritten — a rule that has run keeps its cursor, so moving `starts_at` afterwards changes nothing about what was already posted and cannot replay or skip an occurrence.",
                         "body": {
                             "mode": "raw",
                             "raw": "[]",

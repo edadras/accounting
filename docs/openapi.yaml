@@ -1387,6 +1387,83 @@ paths:
           $ref: '#/components/responses/RateLimited'
         500:
           $ref: '#/components/responses/ServerError'
+    patch:
+      operationId: updateAlertRule
+      tags:
+        - Alerts
+      summary: 'Edit an alert rule'
+      description: 'Edits in place, keeping the id. `type` cannot change: it decides which scanner reads the rule and therefore what `config` means, so switching it would reinterpret the stored config rather than edit it.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'ULID identifier.'
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+                  additionalProperties: true
+                  description: "Scanner-specific settings; the shape depends on the rule's type."
+                channels:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - database
+                      - push
+                      - email
+                      - sms
+                      - telegram
+                      - whatsapp
+                lead_days:
+                  type: integer
+                  description: 'How many days ahead a due-date scanner warns.'
+                  minimum: 0
+                  maximum: 365
+                is_active:
+                  type: boolean
+                  description: 'Pausing a rule stops it firing without losing its settings.'
+      security:
+        -
+          bearerAuth: []
+      responses:
+        200:
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AlertRule'
+        400:
+          $ref: '#/components/responses/WorkspaceRequired'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        422:
+          $ref: '#/components/responses/ValidationFailed'
+        429:
+          $ref: '#/components/responses/RateLimited'
+        500:
+          $ref: '#/components/responses/ServerError'
   '/api/v1/alerts/{id}/read':
     post:
       operationId: markAlertRead
@@ -8837,6 +8914,7 @@ paths:
       tags:
         - Core
       summary: 'Current user'
+      description: 'Carries `deletion` while an account erasure is scheduled — null otherwise. Without it a client could only learn about a pending deletion from the answer to the DELETE that started it, so the grace-period warning disappeared as soon as the app was reopened.'
       parameters:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/RequestId'
@@ -10374,7 +10452,7 @@ paths:
       tags:
         - Recurring
       summary: 'Update a recurring rule'
-      description: 'Only the fields that can safely change after postings exist. The template and the schedule are immutable — editing them would retroactively change what the already posted occurrences were supposed to be.'
+      description: 'The schedule and the template are editable. Already-posted occurrences are never rewritten — a rule that has run keeps its cursor, so moving `starts_at` afterwards changes nothing about what was already posted and cannot replay or skip an occurrence.'
       parameters:
         -
           name: rule
@@ -10404,6 +10482,75 @@ paths:
                   type: boolean
                 is_paused:
                   type: boolean
+                template:
+                  type: object
+                  required:
+                    - type
+                    - account_id
+                    - amount
+                    - currency
+                  properties:
+                    type:
+                      type: string
+                      enum: [income, expense, transfer]
+                    account_id:
+                      type: string
+                      minLength: 26
+                      maxLength: 26
+                      description: 'The account the occurrence posts to.'
+                    counter_account_id:
+                      type: string
+                      minLength: 26
+                      maxLength: 26
+                      description: 'The other side, for a transfer.'
+                    category_id:
+                      type: string
+                      minLength: 26
+                      maxLength: 26
+                      description: 'Category for the posted transaction.'
+                    amount:
+                      type: integer
+                      description: "INTEGER in the currency's minor units."
+                      minimum: 1
+                    currency:
+                      type: string
+                      enum: [IRR, IRT, TRY, USD, EUR, AED, BTC, ETH, USDT, XAU]
+                      description: 'Currency of the occurrence.'
+                    description:
+                      type: string
+                      maxLength: 255
+                    payee:
+                      type: string
+                      maxLength: 255
+                    tags:
+                      type: array
+                      items: { type: string }
+                frequency:
+                  type: string
+                  enum:
+                    - daily
+                    - weekly
+                    - monthly
+                    - yearly
+                interval:
+                  type: integer
+                  description: 'Every N periods.'
+                  minimum: 1
+                  maximum: 365
+                day_of_month:
+                  type: integer
+                  description: 'Clamped to the length of a short month.'
+                  minimum: 1
+                  maximum: 31
+                day_of_week:
+                  type: integer
+                  description: '0 = Sunday. Honoured for a weekly rule; the occurrence is placed on this day within the week the interval lands in, so the interval stays exact.'
+                  minimum: 0
+                  maximum: 6
+                starts_at:
+                  type: string
+                  format: date
+                  description: 'Only moves the cursor on a rule that has not run yet.'
       security:
         -
           bearerAuth: []
@@ -15518,6 +15665,29 @@ components:
             - en
             - tr
             - ar
+        deletion:
+          type:
+            - object
+            - 'null'
+          description: 'Present only while an erasure is scheduled. Nothing is erased before `purge_after`.'
+          properties:
+            status:
+              type: string
+              enum:
+                - deletion_scheduled
+            grace_days:
+              type: integer
+            requested_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+            purge_after:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: 'The moment it stops being reversible.'
     AuthSuccess:
       type: object
       required:
