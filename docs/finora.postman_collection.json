@@ -2923,6 +2923,69 @@
                         "description": "Get a budget"
                     },
                     "response": []
+                },
+                {
+                    "name": "Edit a budget",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "X-Workspace-Id",
+                                "value": "{{workspace_id}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{locale}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{$guid}}",
+                                "type": "text",
+                                "disabled": true
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/budgets/{id}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "budgets",
+                                "{id}"
+                            ],
+                            "query": []
+                        },
+                        "description": "Edit a budget\n\nEdits in place, keeping the id. `currency` is not accepted: spending is measured in the budget's own currency, so re-denominating an existing budget would silently reinterpret every figure already recorded against it. A custom period is validated against the stored window, so moving one end cannot invert it.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "[]",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
                 }
             ]
         },

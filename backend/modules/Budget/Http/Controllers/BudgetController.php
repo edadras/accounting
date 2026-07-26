@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Modules\Budget\Actions\CalculateBudgetUsage;
 use Modules\Budget\Actions\RolloverBudget;
 use Modules\Budget\Http\Requests\StoreBudgetRequest;
+use Modules\Budget\Http\Requests\UpdateBudgetRequest;
 use Modules\Budget\Http\Resources\BudgetResource;
 use Modules\Budget\Models\Budget;
 use Modules\Core\Models\WorkspaceMember;
@@ -58,6 +59,24 @@ final class BudgetController
         $budget->save();
 
         return (new BudgetResource($budget))->response()->setStatusCode(201);
+    }
+
+    public function update(UpdateBudgetRequest $request, string $id): JsonResponse
+    {
+        $budget = Budget::query()->findOrFail($id);
+
+        $data = $request->validated();
+
+        // Moving to the overall scope drops the target rather than leaving a
+        // stale one behind, matching what store() does.
+        if (($data['scope'] ?? null) === Budget::SCOPE_OVERALL) {
+            $data['scope_id'] = null;
+        }
+
+        $budget->fill($data);
+        $budget->save();
+
+        return (new BudgetResource($budget))->response();
     }
 
     public function show(string $id): JsonResponse

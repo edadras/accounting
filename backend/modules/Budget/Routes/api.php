@@ -16,5 +16,6 @@ Route::prefix('api/v1')
         Route::get('budgets/status', [BudgetController::class, 'status']);
 
         Route::get('budgets/{id}', [BudgetController::class, 'show']);
+        Route::patch('budgets/{id}', [BudgetController::class, 'update']);
         Route::delete('budgets/{id}', [BudgetController::class, 'destroy']);
     });

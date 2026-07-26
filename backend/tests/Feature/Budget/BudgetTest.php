@@ -375,6 +375,10 @@ final class BudgetTest extends LedgerTestCase
             'X-Workspace-Id' => $intruderWorkspace->id,
         ])->assertNotFound();
 
+        $this->patchJson("/api/v1/budgets/{$victimBudget->id}", ['name' => 'Theirs now'], [
+            'X-Workspace-Id' => $intruderWorkspace->id,
+        ])->assertNotFound();
+
         $this->getJson('/api/v1/budgets', ['X-Workspace-Id' => $intruderWorkspace->id])
             ->assertOk()
             ->assertJsonCount(0, 'data');
@@ -557,5 +561,128 @@ final class BudgetTest extends LedgerTestCase
         $response->assertOk();
 
         return $response->json('data');
+    }
+
+    #[Test]
+    public function a_budget_is_edited_in_place_rather_than_replaced(): void
+    {
+        $owner = $this->makeUser('budget-patch@example.test');
+        $workspace = $this->makeWorkspace($owner);
+        Sanctum::actingAs($owner);
+
+        $headers = ['X-Workspace-Id' => $workspace->id];
+
+        $created = $this->postJson('/api/v1/budgets', [
+            'name' => 'Groceries',
+            'scope' => 'overall',
+            'period' => 'monthly',
+            'starts_at' => '2026-03-01',
+            'amount' => 150000,
+            'currency' => 'TRY',
+        ], $headers)->assertCreated();
+
+        $id = $created->json('data.id');
+
+        $this->patchJson("/api/v1/budgets/{$id}", [
+            'name' => 'Food',
+            'amount' => 180000,
+            'rollover' => true,
+        ], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.id', $id)
+            ->assertJsonPath('data.name', 'Food')
+            ->assertJsonPath('data.amount.value', 180000)
+            ->assertJsonPath('data.rollover', true);
+
+        // The point of having PATCH at all: one row, same identity. Editing by
+        // create-then-delete leaves a duplicate behind whenever the second leg
+        // fails, and the id a client is holding stops meaning anything.
+        $this->getJson('/api/v1/budgets', $headers)
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
+    public function a_budget_cannot_change_currency(): void
+    {
+        $owner = $this->makeUser('budget-currency@example.test');
+        $workspace = $this->makeWorkspace($owner);
+        Sanctum::actingAs($owner);
+
+        $headers = ['X-Workspace-Id' => $workspace->id];
+
+        $id = $this->postJson('/api/v1/budgets', [
+            'name' => 'Travel',
+            'scope' => 'overall',
+            'period' => 'monthly',
+            'starts_at' => '2026-03-01',
+            'amount' => 90000,
+            'currency' => 'TRY',
+        ], $headers)->assertCreated()->json('data.id');
+
+        // Spending is measured in the budget's own currency, so switching it
+        // would reinterpret every figure already recorded against this budget.
+        $this->patchJson("/api/v1/budgets/{$id}", ['currency' => 'USD'], $headers)
+            ->assertStatus(422);
+
+        $this->getJson("/api/v1/budgets/{$id}", $headers)
+            ->assertOk()
+            ->assertJsonPath('data.amount.currency', 'TRY');
+    }
+
+    #[Test]
+    public function an_edit_cannot_invert_a_custom_period(): void
+    {
+        $owner = $this->makeUser('budget-window@example.test');
+        $workspace = $this->makeWorkspace($owner);
+        Sanctum::actingAs($owner);
+
+        $headers = ['X-Workspace-Id' => $workspace->id];
+
+        $id = $this->postJson('/api/v1/budgets', [
+            'name' => 'Renovation',
+            'scope' => 'overall',
+            'period' => 'custom',
+            'starts_at' => '2026-03-01',
+            'ends_at' => '2026-04-30',
+            'amount' => 500000,
+            'currency' => 'TRY',
+        ], $headers)->assertCreated()->json('data.id');
+
+        // Only one end moves, so the payload alone looks fine; it has to be
+        // checked against the window already stored.
+        $this->patchJson("/api/v1/budgets/{$id}", ['ends_at' => '2026-02-01'], $headers)
+            ->assertStatus(422);
+    }
+
+    #[Test]
+    public function a_viewer_may_not_edit_a_budget(): void
+    {
+        $owner = $this->makeUser('budget-owner-rw@example.test');
+        $workspace = $this->makeWorkspace($owner);
+        Sanctum::actingAs($owner);
+
+        $id = $this->postJson('/api/v1/budgets', [
+            'name' => 'Shared',
+            'scope' => 'overall',
+            'period' => 'monthly',
+            'starts_at' => '2026-03-01',
+            'amount' => 100000,
+            'currency' => 'TRY',
+        ], ['X-Workspace-Id' => $workspace->id])->assertCreated()->json('data.id');
+
+        $viewer = $this->makeUser('budget-viewer@example.test');
+        $workspace->members()->create([
+            'user_id' => $viewer->id,
+            'role' => 'viewer',
+            'joined_at' => now(),
+        ]);
+
+        app(WorkspaceContext::class)->forget();
+        Sanctum::actingAs($viewer);
+
+        $this->patchJson("/api/v1/budgets/{$id}", ['amount' => 1], [
+            'X-Workspace-Id' => $workspace->id,
+        ])->assertForbidden();
     }
 }

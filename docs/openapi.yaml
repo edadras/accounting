@@ -3192,6 +3192,105 @@ paths:
           $ref: '#/components/responses/RateLimited'
         500:
           $ref: '#/components/responses/ServerError'
+    patch:
+      operationId: updateBudget
+      tags:
+        - Budget
+      summary: 'Edit a budget'
+      description: "Edits in place, keeping the id. `currency` is not accepted: spending is measured in the budget's own currency, so re-denominating an existing budget would silently reinterpret every figure already recorded against it. A custom period is validated against the stored window, so moving one end cannot invert it."
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 'ULID identifier.'
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+                scope:
+                  type: string
+                  enum:
+                    - overall
+                    - category
+                    - project
+                    - trip
+                    - building
+                    - member
+                scope_id:
+                  type: string
+                  minLength: 26
+                  maxLength: 26
+                  description: 'Required when moving to a scope other than `overall`. Cleared automatically when moving to `overall`.'
+                period:
+                  type: string
+                  enum:
+                    - monthly
+                    - yearly
+                    - custom
+                starts_at:
+                  type: string
+                  format: date
+                ends_at:
+                  type: string
+                  format: date
+                  description: 'Required while the period is `custom`.'
+                amount:
+                  type: integer
+                  description: "INTEGER in the currency's minor units."
+                  minimum: 1
+                rollover:
+                  type: boolean
+                  description: 'Carry an underspend into the next period. An overspend is never carried forward.'
+                alert_thresholds:
+                  type: array
+                  maxItems: 10
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 1000
+                  description: 'Percentages at which an alert fires.'
+      security:
+        -
+          bearerAuth: []
+      responses:
+        200:
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        400:
+          $ref: '#/components/responses/WorkspaceRequired'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        422:
+          $ref: '#/components/responses/ValidationFailed'
+        429:
+          $ref: '#/components/responses/RateLimited'
+        500:
+          $ref: '#/components/responses/ServerError'
   '/api/v1/building-charges/{charge}/pay':
     post:
       operationId: payBuildingCharge

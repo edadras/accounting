@@ -264,6 +264,26 @@ return [
         'summary' => 'Get a budget',
         'responses' => [200 => $res('The budget.', $data($R('Budget'))), 404 => ['$ref' => '#/components/responses/NotFound']],
     ],
+    'PATCH /api/v1/budgets/{id}' => ['id' => 'updateBudget', 'tag' => 'Budget', 'summary' => 'Edit a budget',
+        'description' => 'Edits in place, keeping the id. `currency` is not accepted: spending is measured in the '
+            .'budget\'s own currency, so re-denominating an existing budget would silently reinterpret every figure '
+            .'already recorded against it. A custom period is validated against the stored window, so moving one end '
+            .'cannot invert it.',
+        'body' => $body([
+            'name' => $str('', ['maxLength' => 120]),
+            'scope' => $enum(['overall', 'category', 'project', 'trip', 'building', 'member']),
+            'scope_id' => $ulidIn('Required when moving to a scope other than `overall`. Cleared automatically when moving to `overall`.'),
+            'period' => $enum(['monthly', 'yearly', 'custom']),
+            'starts_at' => $date(), 'ends_at' => $date('Required while the period is `custom`.'),
+            'amount' => $int('INTEGER in the currency\'s minor units.', ['minimum' => 1]),
+            'rollover' => $bool('Carry an underspend into the next period. An overspend is never carried forward.'),
+            'alert_thresholds' => ['type' => 'array', 'maxItems' => 10, 'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 1000], 'description' => 'Percentages at which an alert fires.'],
+        ]),
+        'responses' => [
+            200 => $res('Updated.', $data($R('Budget'))),
+            403 => ['$ref' => '#/components/responses/Forbidden'],
+            404 => ['$ref' => '#/components/responses/NotFound'],
+        ]],
     'DELETE /api/v1/budgets/{id}' => [
         'id' => 'deleteBudget', 'tag' => 'Budget',
         'summary' => 'Delete a budget',
